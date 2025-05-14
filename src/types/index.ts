@@ -57,9 +57,12 @@ export interface Order {
     full_name: string | null;
     phone: string | null;
     address: string | null;
-    email?: string; // Add email field that might come from auth.users
     created_at: string;
     updated_at: string;
+  };
+  // Optional user data with email
+  user?: {
+    email: string;
   };
   // Add a computed property for customer
   get customer(): {
@@ -73,7 +76,7 @@ export interface Order {
     return {
       id: this.profiles?.id || this.user_id,
       name: this.profiles?.full_name || 'Unknown',
-      email: this.profiles?.email || '',
+      email: this.user?.email || '',
       phone: this.profiles?.phone || '',
       address: this.profiles?.address || '',
       created_at: this.profiles?.created_at || this.created_at,
@@ -94,7 +97,7 @@ export function processOrder(order: any): Order {
       return {
         id: order.profiles?.id || order.user_id,
         name: order.profiles?.full_name || 'Unknown',
-        email: order.profiles?.email || '',
+        email: order.user?.email || '',
         phone: order.profiles?.phone || '',
         address: order.profiles?.address || '',
         created_at: order.profiles?.created_at || order.created_at,

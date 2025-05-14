@@ -50,31 +50,35 @@ const fetchOrders = async (): Promise<Order[]> => {
       
       if (itemsError) throw itemsError;
       
-      // Get customer data with email
-      const { data: customerData, error: customerError } = await supabase
+      // Get customer profile data
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*, users:user_id(email)')
+        .select('*')
         .eq('id', order.user_id)
         .single();
       
-      if (customerError) {
-        console.error('Error fetching customer data:', customerError);
+      if (profileError && profileError.code !== 'PGRST116') {
+        // PGRST116 is "not found" error, which is fine
+        console.error('Error fetching profile data:', profileError);
       }
       
-      // Extract email from the users join if available
-      let email = '';
-      if (customerData && customerData.users && customerData.users.email) {
-        email = customerData.users.email;
+      // Get user email directly from auth.users through Supabase functions
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('email')
+        .eq('id', order.user_id)
+        .single();
+      
+      if (userError) {
+        console.error('Error fetching user email:', userError);
       }
 
       // Create the processed order with all necessary data
       const processedOrder = {
         ...order,
         items: items || [],
-        profiles: customerData ? {
-          ...customerData,
-          email: email // Add email to the profiles object
-        } : undefined
+        profiles: profileData || undefined,
+        user: userData || undefined
       };
       
       return processOrder(processedOrder);
@@ -115,31 +119,34 @@ const fetchOrder = async (id: string): Promise<Order | null> => {
     
     if (itemsError) throw itemsError;
     
-    // Get customer data with email
-    const { data: customerData, error: customerError } = await supabase
+    // Get customer profile data
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .select('*, users:user_id(email)')
+      .select('*')
       .eq('id', order.user_id)
       .single();
     
-    if (customerError) {
-      console.error('Error fetching customer data:', customerError);
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('Error fetching profile data:', profileError);
     }
     
-    // Extract email from the users join if available
-    let email = '';
-    if (customerData && customerData.users && customerData.users.email) {
-      email = customerData.users.email;
+    // Get user email directly from users table
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('email')
+      .eq('id', order.user_id)
+      .single();
+    
+    if (userError) {
+      console.error('Error fetching user email:', userError);
     }
 
     // Process the order with our utility function
     return processOrder({
       ...order,
       items: items || [],
-      profiles: customerData ? {
-        ...customerData,
-        email: email // Add email to the profiles object
-      } : undefined
+      profiles: profileData || undefined,
+      user: userData || undefined
     });
   } catch (error) {
     console.error(`Error fetching order ${id}:`, error);
