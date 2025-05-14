@@ -40,15 +40,7 @@ const fetchCustomers = async (): Promise<Customer[]> => {
     throw error;
   }
   
-  // Map profiles to Customer type
-  return (data || []).map(profile => ({
-    id: profile.id,
-    name: profile.full_name || 'Unknown',
-    email: profile.email || '',
-    phone: profile.phone || '',
-    address: profile.address || '',
-    created_at: profile.created_at
-  }));
+  return data as Customer[];
 };
 
 const Customers = () => {
@@ -68,9 +60,8 @@ const Customers = () => {
 
   // Filter customers based on search input
   const filteredCustomers = customers.filter(customer => 
-    customer.name.toLowerCase().includes(filterValue.toLowerCase()) ||
-    customer.email.toLowerCase().includes(filterValue.toLowerCase()) ||
-    customer.phone.includes(filterValue)
+    (customer.full_name || '').toLowerCase().includes(filterValue.toLowerCase()) ||
+    (customer.phone || '').includes(filterValue)
   );
 
   // Handlers
@@ -133,19 +124,15 @@ const Customers = () => {
                   <div className="space-y-2">
                     <div className="grid grid-cols-[100px_1fr] gap-1">
                       <div className="text-muted-foreground">Name:</div>
-                      <div className="font-medium">{selectedCustomer.name}</div>
-                    </div>
-                    <div className="grid grid-cols-[100px_1fr] gap-1">
-                      <div className="text-muted-foreground">Email:</div>
-                      <div>{selectedCustomer.email}</div>
+                      <div className="font-medium">{selectedCustomer.full_name || 'Unknown'}</div>
                     </div>
                     <div className="grid grid-cols-[100px_1fr] gap-1">
                       <div className="text-muted-foreground">Phone:</div>
-                      <div>{selectedCustomer.phone}</div>
+                      <div>{selectedCustomer.phone || 'N/A'}</div>
                     </div>
                     <div className="grid grid-cols-[100px_1fr] gap-1">
                       <div className="text-muted-foreground">Address:</div>
-                      <div>{selectedCustomer.address}</div>
+                      <div>{selectedCustomer.address || 'N/A'}</div>
                     </div>
                     <div className="grid grid-cols-[100px_1fr] gap-1">
                       <div className="text-muted-foreground">Customer since:</div>

@@ -40,20 +40,16 @@ const CustomersTable: React.FC<CustomersTableProps> = ({
           {customers.length > 0 ? (
             customers.map((customer) => (
               <TableRow key={customer.id}>
-                <TableCell className="font-medium">{customer.name}</TableCell>
+                <TableCell className="font-medium">{customer.full_name || 'Unknown'}</TableCell>
                 <TableCell>
                   <div className="space-y-1">
                     <div className="flex items-center text-sm text-muted-foreground">
-                      <Mail className="h-4 w-4 mr-2" />
-                      {customer.email}
-                    </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
                       <Phone className="h-4 w-4 mr-2" />
-                      {customer.phone}
+                      {customer.phone || 'N/A'}
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="max-w-[200px] truncate">{customer.address}</TableCell>
+                <TableCell className="max-w-[200px] truncate">{customer.address || 'N/A'}</TableCell>
                 <TableCell>{formatDistanceToNow(new Date(customer.created_at), { addSuffix: true })}</TableCell>
                 <TableCell className="text-right">
                   <Button

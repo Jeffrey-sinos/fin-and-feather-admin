@@ -7,6 +7,7 @@ import RecentOrdersList from '@/components/dashboard/overview/RecentOrdersList';
 import { Package, ShoppingCart, Users, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
+import { Order } from '@/types';
 
 const fetchDashboardStats = async () => {
   try {
@@ -48,20 +49,18 @@ const fetchDashboardStats = async () => {
     
     const totalRevenue = revenueData?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0;
     
-    // Get recent orders with customer data
+    // Get recent orders
     const { data: recentOrdersData, error: recentOrdersError } = await supabase
       .from('orders')
-      .select(`
-        *,
-        profiles(*)
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(5);
     
     if (recentOrdersError) throw recentOrdersError;
     
-    // Get order items for each order
+    // Get order items and customer data for each order
     const recentOrders = await Promise.all((recentOrdersData || []).map(async (order) => {
+      // Get order items
       const { data: items, error: itemsError } = await supabase
         .from('order_items')
         .select(`
@@ -72,11 +71,35 @@ const fetchDashboardStats = async () => {
       
       if (itemsError) throw itemsError;
       
+      // Get customer data
+      const { data: customerData, error: customerError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', order.user_id)
+        .single();
+      
+      if (customerError) {
+        console.error('Error fetching customer data:', customerError);
+      }
+
+      const processedItems = items?.map(item => ({
+        ...item,
+        product: item.products // Map to match our OrderItem type
+      })) || [];
+      
       return {
         ...order,
-        customer: order.profiles,
-        items: items || []
-      };
+        customer_id: order.user_id,
+        customer: {
+          id: customerData?.id || '',
+          name: customerData?.full_name || 'Unknown',
+          email: '',
+          phone: customerData?.phone || '',
+          address: customerData?.address || '',
+          created_at: customerData?.created_at || order.created_at
+        },
+        items: processedItems
+      } as Order;
     }));
 
     return {

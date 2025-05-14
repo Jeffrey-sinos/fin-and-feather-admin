@@ -29,19 +29,17 @@ type StatusFilter = "all" | "pending" | "processing" | "completed" | "cancelled"
 // Fetch all orders from Supabase
 const fetchOrders = async (): Promise<Order[]> => {
   try {
-    // Get orders with customer data
+    // Get orders
     const { data: ordersData, error: ordersError } = await supabase
       .from('orders')
-      .select(`
-        *,
-        profiles(*)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
     
     if (ordersError) throw ordersError;
     
-    // Get order items for each order
+    // Get order items and customer data for each order
     const orders = await Promise.all((ordersData || []).map(async (order) => {
+      // Get order items
       const { data: items, error: itemsError } = await supabase
         .from('order_items')
         .select(`
@@ -52,18 +50,35 @@ const fetchOrders = async (): Promise<Order[]> => {
       
       if (itemsError) throw itemsError;
       
+      // Get customer data
+      const { data: customerData, error: customerError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', order.user_id)
+        .single();
+      
+      if (customerError) {
+        console.error('Error fetching customer data:', customerError);
+      }
+
+      const processedItems = items?.map(item => ({
+        ...item,
+        product: item.products // Map to match our OrderItem type
+      })) || [];
+      
       return {
         ...order,
+        customer_id: order.user_id,
         customer: {
-          id: order.profiles?.id || '',
-          name: order.profiles?.full_name || 'Unknown',
-          email: order.profiles?.email || '',
-          phone: order.profiles?.phone || '',
-          address: order.profiles?.address || '',
-          created_at: order.profiles?.created_at || order.created_at
+          id: customerData?.id || '',
+          name: customerData?.full_name || 'Unknown',
+          email: '',
+          phone: customerData?.phone || '',
+          address: customerData?.address || '',
+          created_at: customerData?.created_at || order.created_at
         },
-        items: items || []
-      };
+        items: processedItems
+      } as Order;
     }));
     
     return orders;
@@ -81,12 +96,10 @@ const fetchOrders = async (): Promise<Order[]> => {
 // Fetch a single order from Supabase
 const fetchOrder = async (id: string): Promise<Order | null> => {
   try {
+    // Get order
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select(`
-        *,
-        profiles(*)
-      `)
+      .select('*')
       .eq('id', id)
       .single();
     
@@ -103,18 +116,35 @@ const fetchOrder = async (id: string): Promise<Order | null> => {
     
     if (itemsError) throw itemsError;
     
+    // Get customer data
+    const { data: customerData, error: customerError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', order.user_id)
+      .single();
+    
+    if (customerError) {
+      console.error('Error fetching customer data:', customerError);
+    }
+
+    const processedItems = items?.map(item => ({
+      ...item,
+      product: item.products // Map to match our OrderItem type
+    })) || [];
+    
     return {
       ...order,
+      customer_id: order.user_id,
       customer: {
-        id: order.profiles?.id || '',
-        name: order.profiles?.full_name || 'Unknown',
-        email: order.profiles?.email || '',
-        phone: order.profiles?.phone || '',
-        address: order.profiles?.address || '',
-        created_at: order.profiles?.created_at || order.created_at
+        id: customerData?.id || '',
+        name: customerData?.full_name || 'Unknown',
+        email: '',
+        phone: customerData?.phone || '',
+        address: customerData?.address || '',
+        created_at: customerData?.created_at || order.created_at
       },
-      items: items || []
-    };
+      items: processedItems
+    } as Order;
   } catch (error) {
     console.error(`Error fetching order ${id}:`, error);
     toast({

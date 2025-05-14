@@ -1,11 +1,12 @@
 
+
 export interface Customer {
   id: string;
-  name: string;
-  email: string;
+  full_name: string;
   phone: string;
   address: string;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Product {
@@ -23,19 +24,26 @@ export interface OrderItem {
   id: string;
   order_id: string;
   product_id: string;
-  product: Product;
+  products: Product; // Match the Supabase response
   quantity: number;
   unit_price: number;
 }
 
 export interface Order {
   id: string;
-  customer_id: string;
-  customer: Customer;
+  user_id: string; // Changed from customer_id to match database
   status: 'pending' | 'processing' | 'completed' | 'cancelled';
   total_amount: number;
   created_at: string;
   items: OrderItem[];
+  profiles?: { // Optional to handle the relationship
+    id: string;
+    full_name: string | null;
+    phone: string | null;
+    address: string | null;
+    created_at: string;
+    updated_at: string;
+  };
 }
 
 export interface DashboardStats {
