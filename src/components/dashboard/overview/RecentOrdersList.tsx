@@ -56,7 +56,7 @@ const RecentOrdersList: React.FC<RecentOrdersListProps> = ({ orders }) => {
               orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className="font-medium">{order.id.substring(0, 8)}...</TableCell>
-                  <TableCell>{order.customer.name}</TableCell>
+                  <TableCell>{order.customer?.name || 'Unknown'}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={getStatusColor(order.status)}>
                       {order.status}

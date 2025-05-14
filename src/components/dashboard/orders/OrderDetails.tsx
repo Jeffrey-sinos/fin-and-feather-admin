@@ -106,21 +106,21 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onStatusChange }) =>
             <div className="space-y-2">
               <div className="grid grid-cols-[100px_1fr] gap-1">
                 <div className="text-muted-foreground">Name:</div>
-                <div className="font-medium">{order.customer.name}</div>
+                <div className="font-medium">{order.customer?.name || 'Unknown'}</div>
               </div>
-              {order.customer.email && (
+              {order.customer?.email && (
                 <div className="grid grid-cols-[100px_1fr] gap-1">
                   <div className="text-muted-foreground">Email:</div>
                   <div>{order.customer.email}</div>
                 </div>
               )}
-              {order.customer.phone && (
+              {order.customer?.phone && (
                 <div className="grid grid-cols-[100px_1fr] gap-1">
                   <div className="text-muted-foreground">Phone:</div>
                   <div>{order.customer.phone}</div>
                 </div>
               )}
-              {order.customer.address && (
+              {order.customer?.address && (
                 <div className="grid grid-cols-[100px_1fr] gap-1">
                   <div className="text-muted-foreground">Address:</div>
                   <div>{order.customer.address}</div>

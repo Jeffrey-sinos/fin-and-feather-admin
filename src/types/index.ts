@@ -26,10 +26,17 @@ export interface OrderItem {
   products: Product; // This matches the Supabase response structure
   quantity: number;
   unit_price: number;
-  // Add alias for backward compatibility
-  get product(): Product {
-    return this.products;
-  }
+}
+
+// Add a utility function to convert Supabase order item to our OrderItem type
+export function processOrderItems(items: any[]): OrderItem[] {
+  return items.map(item => ({
+    ...item,
+    // Maintain compatibility with code expecting the product property
+    get product() { 
+      return item.products; 
+    }
+  }));
 }
 
 export interface Order {
@@ -39,6 +46,7 @@ export interface Order {
   total_amount: number;
   created_at: string;
   items: OrderItem[];
+  // Optional profiles from Supabase joins
   profiles?: {
     id: string;
     full_name: string | null;
@@ -47,24 +55,25 @@ export interface Order {
     created_at: string;
     updated_at: string;
   };
-  // Add customer as a computed property to maintain compatibility
-  get customer(): {
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-    address: string;
-    created_at: string;
-  } {
-    return {
-      id: this.profiles?.id || this.user_id,
-      name: this.profiles?.full_name || 'Unknown',
-      email: '', // No email in profiles table
-      phone: this.profiles?.phone || '',
-      address: this.profiles?.address || '',
-      created_at: this.profiles?.created_at || this.created_at,
-    };
-  }
+}
+
+// Add a utility function to process orders from Supabase
+export function processOrder(order: any): Order {
+  return {
+    ...order,
+    items: processOrderItems(order.items || []),
+    // Add customer as a computed property
+    get customer() {
+      return {
+        id: order.profiles?.id || order.user_id,
+        name: order.profiles?.full_name || 'Unknown',
+        email: '', // No email in profiles table
+        phone: order.profiles?.phone || '',
+        address: order.profiles?.address || '',
+        created_at: order.profiles?.created_at || order.created_at,
+      };
+    }
+  };
 }
 
 export interface DashboardStats {

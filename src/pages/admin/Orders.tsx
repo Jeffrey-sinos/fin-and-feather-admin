@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
 import OrdersTable from '@/components/dashboard/orders/OrdersTable';
 import OrderDetails from '@/components/dashboard/orders/OrderDetails';
-import { Order } from '@/types';
+import { Order, processOrder } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import {
@@ -60,23 +60,12 @@ const fetchOrders = async (): Promise<Order[]> => {
         console.error('Error fetching customer data:', customerError);
       }
 
-      // Create the order object with all properties expected by the Order type
-      return {
+      // Return the order with items and profiles (customer data)
+      return processOrder({
         ...order,
         items: items || [],
-        profiles: customerData || undefined,
-        // Needed for TypeScript - the getter in our type will handle this at runtime
-        get customer() {
-          return {
-            id: this.profiles?.id || this.user_id,
-            name: this.profiles?.full_name || 'Unknown',
-            email: '',
-            phone: this.profiles?.phone || '',
-            address: this.profiles?.address || '',
-            created_at: this.profiles?.created_at || this.created_at
-          }
-        }
-      } as Order;
+        profiles: customerData || undefined
+      });
     }));
     
     return orders;
@@ -125,24 +114,12 @@ const fetchOrder = async (id: string): Promise<Order | null> => {
       console.error('Error fetching customer data:', customerError);
     }
 
-    const processedItems = items?.map(item => ({
-      ...item,
-      product: item.products // Map to match our OrderItem type
-    })) || [];
-    
-    return {
+    // Process the order with our utility function
+    return processOrder({
       ...order,
-      customer_id: order.user_id,
-      customer: {
-        id: customerData?.id || '',
-        name: customerData?.full_name || 'Unknown',
-        email: '',
-        phone: customerData?.phone || '',
-        address: customerData?.address || '',
-        created_at: customerData?.created_at || order.created_at
-      },
-      items: processedItems
-    } as Order;
+      items: items || [],
+      profiles: customerData || undefined
+    });
   } catch (error) {
     console.error(`Error fetching order ${id}:`, error);
     toast({
@@ -218,8 +195,8 @@ const Orders = () => {
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
       order.id.toLowerCase().includes(filterValue.toLowerCase()) ||
-      (order.customer.name && order.customer.name.toLowerCase().includes(filterValue.toLowerCase())) ||
-      (order.customer.email && order.customer.email.toLowerCase().includes(filterValue.toLowerCase()));
+      (order.customer?.name && order.customer.name.toLowerCase().includes(filterValue.toLowerCase())) ||
+      (order.customer?.email && order.customer.email.toLowerCase().includes(filterValue.toLowerCase()));
     
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     
