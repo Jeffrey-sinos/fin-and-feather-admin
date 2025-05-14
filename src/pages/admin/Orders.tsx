@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
@@ -49,23 +50,34 @@ const fetchOrders = async (): Promise<Order[]> => {
       
       if (itemsError) throw itemsError;
       
-      // Get customer data
+      // Get customer data with email
       const { data: customerData, error: customerError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, users:user_id(email)')
         .eq('id', order.user_id)
         .single();
       
       if (customerError) {
         console.error('Error fetching customer data:', customerError);
       }
+      
+      // Extract email from the users join if available
+      let email = '';
+      if (customerData && customerData.users && customerData.users.email) {
+        email = customerData.users.email;
+      }
 
-      // Return the order with items and profiles (customer data)
-      return processOrder({
+      // Create the processed order with all necessary data
+      const processedOrder = {
         ...order,
         items: items || [],
-        profiles: customerData || undefined
-      });
+        profiles: customerData ? {
+          ...customerData,
+          email: email // Add email to the profiles object
+        } : undefined
+      };
+      
+      return processOrder(processedOrder);
     }));
     
     return orders;
@@ -103,22 +115,31 @@ const fetchOrder = async (id: string): Promise<Order | null> => {
     
     if (itemsError) throw itemsError;
     
-    // Get customer data
+    // Get customer data with email
     const { data: customerData, error: customerError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('*, users:user_id(email)')
       .eq('id', order.user_id)
       .single();
     
     if (customerError) {
       console.error('Error fetching customer data:', customerError);
     }
+    
+    // Extract email from the users join if available
+    let email = '';
+    if (customerData && customerData.users && customerData.users.email) {
+      email = customerData.users.email;
+    }
 
     // Process the order with our utility function
     return processOrder({
       ...order,
       items: items || [],
-      profiles: customerData || undefined
+      profiles: customerData ? {
+        ...customerData,
+        email: email // Add email to the profiles object
+      } : undefined
     });
   } catch (error) {
     console.error(`Error fetching order ${id}:`, error);

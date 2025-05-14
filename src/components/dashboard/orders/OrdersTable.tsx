@@ -46,6 +46,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({
           <TableRow>
             <TableHead>Order ID</TableHead>
             <TableHead>Customer</TableHead>
+            <TableHead>Email</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Amount</TableHead>
@@ -59,6 +60,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({
               <TableRow key={order.id}>
                 <TableCell className="font-medium">{order.id.substring(0, 8)}...</TableCell>
                 <TableCell>{order.customer?.name || 'Unknown'}</TableCell>
+                <TableCell>{order.customer?.email || 'N/A'}</TableCell>
                 <TableCell>
                   <Badge variant="outline" className={getStatusColor(order.status)}>
                     {order.status}
@@ -80,7 +82,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={7} className="text-center">No orders found</TableCell>
+              <TableCell colSpan={8} className="text-center">No orders found</TableCell>
             </TableRow>
           )}
         </TableBody>

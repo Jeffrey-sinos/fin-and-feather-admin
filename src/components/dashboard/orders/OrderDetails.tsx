@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Card, 
@@ -108,12 +109,10 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onStatusChange }) =>
                 <div className="text-muted-foreground">Name:</div>
                 <div className="font-medium">{order.customer?.name || 'Unknown'}</div>
               </div>
-              {order.customer?.email && (
-                <div className="grid grid-cols-[100px_1fr] gap-1">
-                  <div className="text-muted-foreground">Email:</div>
-                  <div>{order.customer.email}</div>
-                </div>
-              )}
+              <div className="grid grid-cols-[100px_1fr] gap-1">
+                <div className="text-muted-foreground">Email:</div>
+                <div>{order.customer?.email || 'N/A'}</div>
+              </div>
               {order.customer?.phone && (
                 <div className="grid grid-cols-[100px_1fr] gap-1">
                   <div className="text-muted-foreground">Phone:</div>
