@@ -1,17 +1,112 @@
 
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getDashboardStats } from '@/lib/supabase';
 import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
 import StatsCard from '@/components/dashboard/overview/StatsCard';
 import RecentOrdersList from '@/components/dashboard/overview/RecentOrdersList';
 import { Package, ShoppingCart, Users, DollarSign } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/use-toast';
+
+const fetchDashboardStats = async () => {
+  try {
+    // Get total number of orders
+    const { count: totalOrders, error: ordersError } = await supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true });
+    
+    if (ordersError) throw ordersError;
+
+    // Get total number of customers
+    const { count: totalCustomers, error: customersError } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true });
+    
+    if (customersError) throw customersError;
+
+    // Get total number of products
+    const { count: totalProducts, error: productsError } = await supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true });
+    
+    if (productsError) throw productsError;
+      
+    // Get low stock products count
+    const { count: lowStockProducts, error: lowStockError } = await supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true })
+      .lt('stock', 10);
+    
+    if (lowStockError) throw lowStockError;
+      
+    // Get total revenue
+    const { data: revenueData, error: revenueError } = await supabase
+      .from('orders')
+      .select('total_amount');
+    
+    if (revenueError) throw revenueError;
+    
+    const totalRevenue = revenueData?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0;
+    
+    // Get recent orders with customer data
+    const { data: recentOrdersData, error: recentOrdersError } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        profiles(*)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    
+    if (recentOrdersError) throw recentOrdersError;
+    
+    // Get order items for each order
+    const recentOrders = await Promise.all((recentOrdersData || []).map(async (order) => {
+      const { data: items, error: itemsError } = await supabase
+        .from('order_items')
+        .select(`
+          *,
+          products(*)
+        `)
+        .eq('order_id', order.id);
+      
+      if (itemsError) throw itemsError;
+      
+      return {
+        ...order,
+        customer: order.profiles,
+        items: items || []
+      };
+    }));
+
+    return {
+      totalOrders: totalOrders || 0,
+      totalCustomers: totalCustomers || 0,
+      totalProducts: totalProducts || 0,
+      totalRevenue,
+      lowStockProducts: lowStockProducts || 0,
+      recentOrders
+    };
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    toast({
+      title: "Error",
+      description: "Failed to load dashboard statistics",
+      variant: "destructive"
+    });
+    throw error;
+  }
+};
 
 const Dashboard = () => {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, error } = useQuery({
     queryKey: ['dashboardStats'],
-    queryFn: getDashboardStats,
+    queryFn: fetchDashboardStats,
   });
+
+  if (error) {
+    console.error('Error loading dashboard data:', error);
+  }
 
   return (
     <DashboardLayout>

@@ -8,7 +8,6 @@ import {
   CardTitle 
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { 
   Table, 
   TableBody, 
@@ -26,28 +25,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from '@/components/ui/sonner';
-import { updateOrderStatus } from '@/lib/supabase';
 import { format } from 'date-fns';
 
 interface OrderDetailsProps {
   order: Order;
-  onStatusChange: () => void;
+  onStatusChange: (status: Order['status']) => void;
 }
 
 const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onStatusChange }) => {
   const [updatingStatus, setUpdatingStatus] = React.useState(false);
   
   const handleStatusChange = async (status: Order['status']) => {
+    if (status === order.status) return;
+    
     setUpdatingStatus(true);
     
     try {
-      const success = await updateOrderStatus(order.id, status);
-      if (success) {
-        onStatusChange();
-      }
+      onStatusChange(status);
     } catch (error) {
-      toast.error('Failed to update order status');
       console.error(error);
     } finally {
       setUpdatingStatus(false);
@@ -142,7 +137,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onStatusChange }) =>
               </div>
               <div className="grid grid-cols-[100px_1fr] gap-1">
                 <div className="text-muted-foreground">Total:</div>
-                <div className="font-bold text-xl">${order.total_amount.toFixed(2)}</div>
+                <div className="font-bold text-xl">${Number(order.total_amount).toFixed(2)}</div>
               </div>
             </div>
           </CardContent>
@@ -192,10 +187,10 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onStatusChange }) =>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>${item.unit_price.toFixed(2)}</TableCell>
+                  <TableCell>${Number(item.unit_price).toFixed(2)}</TableCell>
                   <TableCell>{item.quantity}</TableCell>
                   <TableCell className="text-right">
-                    ${(item.unit_price * item.quantity).toFixed(2)}
+                    ${(Number(item.unit_price) * item.quantity).toFixed(2)}
                   </TableCell>
                 </TableRow>
               ))}

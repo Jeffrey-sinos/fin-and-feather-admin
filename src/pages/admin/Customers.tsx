@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getCustomers, getCustomer } from '@/lib/supabase';
 import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
 import CustomersTable from '@/components/dashboard/customers/CustomersTable';
 import { Customer } from '@/types';
@@ -22,6 +21,35 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/use-toast';
+
+// Fetch customers from Supabase
+const fetchCustomers = async (): Promise<Customer[]> => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('full_name');
+  
+  if (error) {
+    toast({
+      title: "Error",
+      description: "Failed to load customers",
+      variant: "destructive"
+    });
+    throw error;
+  }
+  
+  // Map profiles to Customer type
+  return (data || []).map(profile => ({
+    id: profile.id,
+    name: profile.full_name || 'Unknown',
+    email: profile.email || '',
+    phone: profile.phone || '',
+    address: profile.address || '',
+    created_at: profile.created_at
+  }));
+};
 
 const Customers = () => {
   const [filterValue, setFilterValue] = useState('');
@@ -29,10 +57,14 @@ const Customers = () => {
   const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
 
   // Queries
-  const { data: customers = [], isLoading } = useQuery({
+  const { data: customers = [], isLoading, error } = useQuery({
     queryKey: ['customers'],
-    queryFn: getCustomers,
+    queryFn: fetchCustomers,
   });
+
+  if (error) {
+    console.error('Error loading customers data:', error);
+  }
 
   // Filter customers based on search input
   const filteredCustomers = customers.filter(customer => 

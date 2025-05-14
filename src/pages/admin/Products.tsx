@@ -1,7 +1,5 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getProducts, createProduct, updateProduct, deleteProduct } from '@/lib/supabase';
 import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
 import ProductsTable from '@/components/dashboard/products/ProductsTable';
 import ProductForm, { ProductFormData } from '@/components/dashboard/products/ProductForm';
@@ -28,6 +26,84 @@ import {
 import { Plus, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+// Fetch products from Supabase
+const fetchProducts = async (): Promise<Product[]> => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .order('name');
+  
+  if (error) {
+    toast({
+      title: "Error",
+      description: "Failed to load products",
+      variant: "destructive"
+    });
+    throw error;
+  }
+  
+  return data as Product[];
+};
+
+// Create a new product
+const createProductInSupabase = async (product: Omit<Product, 'id' | 'created_at'>): Promise<Product> => {
+  const { data, error } = await supabase
+    .from('products')
+    .insert(product)
+    .select()
+    .single();
+  
+  if (error) {
+    toast({
+      title: "Error",
+      description: "Failed to create product",
+      variant: "destructive"
+    });
+    throw error;
+  }
+  
+  return data as Product;
+};
+
+// Update an existing product
+const updateProductInSupabase = async ({ id, data }: { id: string; data: Partial<Product> }): Promise<Product> => {
+  const { data: updatedData, error } = await supabase
+    .from('products')
+    .update(data)
+    .eq('id', id)
+    .select()
+    .single();
+  
+  if (error) {
+    toast({
+      title: "Error",
+      description: "Failed to update product",
+      variant: "destructive"
+    });
+    throw error;
+  }
+  
+  return updatedData as Product;
+};
+
+// Delete a product
+const deleteProductFromSupabase = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('products')
+    .delete()
+    .eq('id', id);
+  
+  if (error) {
+    toast({
+      title: "Error",
+      description: "Failed to delete product",
+      variant: "destructive"
+    });
+    throw error;
+  }
+};
 
 const Products = () => {
   const queryClient = useQueryClient();
@@ -40,14 +116,14 @@ const Products = () => {
   // Queries
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products'],
-    queryFn: getProducts,
+    queryFn: fetchProducts,
   });
 
   // Filter products based on search input
   const filteredProducts = products.filter(product => 
     product.name.toLowerCase().includes(filterValue.toLowerCase()) ||
-    product.description.toLowerCase().includes(filterValue.toLowerCase()) ||
-    product.category.toLowerCase().includes(filterValue.toLowerCase())
+    product.description?.toLowerCase().includes(filterValue.toLowerCase()) ||
+    product.category?.toLowerCase().includes(filterValue.toLowerCase())
   );
 
   // Mutations
@@ -56,13 +132,13 @@ const Products = () => {
       // Ensure all required fields are present
       const productData = {
         name: data.name,
-        description: data.description,
+        description: data.description || '',
         price: data.price,
         category: data.category,
         stock: data.stock,
-        image_url: data.image_url || undefined
+        image_url: data.image_url || null
       };
-      return createProduct(productData);
+      return createProductInSupabase(productData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -79,13 +155,13 @@ const Products = () => {
       // Ensure all required fields are present
       const productData = {
         name: data.name,
-        description: data.description,
+        description: data.description || '',
         price: data.price,
         category: data.category,
         stock: data.stock,
-        image_url: data.image_url || undefined
+        image_url: data.image_url || null
       };
-      return updateProduct(id, productData);
+      return updateProductInSupabase({ id, data: productData });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -99,7 +175,7 @@ const Products = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteProduct(id),
+    mutationFn: (id: string) => deleteProductFromSupabase(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       setProductToDelete(null);

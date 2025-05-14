@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getOrders, getOrder, updateOrderStatus } from '@/lib/supabase';
 import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
 import OrdersTable from '@/components/dashboard/orders/OrdersTable';
 import OrderDetails from '@/components/dashboard/orders/OrderDetails';
@@ -22,8 +21,136 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 type StatusFilter = "all" | "pending" | "processing" | "completed" | "cancelled";
+
+// Fetch all orders from Supabase
+const fetchOrders = async (): Promise<Order[]> => {
+  try {
+    // Get orders with customer data
+    const { data: ordersData, error: ordersError } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        profiles(*)
+      `)
+      .order('created_at', { ascending: false });
+    
+    if (ordersError) throw ordersError;
+    
+    // Get order items for each order
+    const orders = await Promise.all((ordersData || []).map(async (order) => {
+      const { data: items, error: itemsError } = await supabase
+        .from('order_items')
+        .select(`
+          *,
+          products(*)
+        `)
+        .eq('order_id', order.id);
+      
+      if (itemsError) throw itemsError;
+      
+      return {
+        ...order,
+        customer: {
+          id: order.profiles?.id || '',
+          name: order.profiles?.full_name || 'Unknown',
+          email: order.profiles?.email || '',
+          phone: order.profiles?.phone || '',
+          address: order.profiles?.address || '',
+          created_at: order.profiles?.created_at || order.created_at
+        },
+        items: items || []
+      };
+    }));
+    
+    return orders;
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    toast({
+      title: "Error",
+      description: "Failed to load orders",
+      variant: "destructive"
+    });
+    throw error;
+  }
+};
+
+// Fetch a single order from Supabase
+const fetchOrder = async (id: string): Promise<Order | null> => {
+  try {
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        profiles(*)
+      `)
+      .eq('id', id)
+      .single();
+    
+    if (orderError) throw orderError;
+    
+    // Get order items
+    const { data: items, error: itemsError } = await supabase
+      .from('order_items')
+      .select(`
+        *,
+        products(*)
+      `)
+      .eq('order_id', id);
+    
+    if (itemsError) throw itemsError;
+    
+    return {
+      ...order,
+      customer: {
+        id: order.profiles?.id || '',
+        name: order.profiles?.full_name || 'Unknown',
+        email: order.profiles?.email || '',
+        phone: order.profiles?.phone || '',
+        address: order.profiles?.address || '',
+        created_at: order.profiles?.created_at || order.created_at
+      },
+      items: items || []
+    };
+  } catch (error) {
+    console.error(`Error fetching order ${id}:`, error);
+    toast({
+      title: "Error",
+      description: "Failed to load order details",
+      variant: "destructive"
+    });
+    throw error;
+  }
+};
+
+// Update order status in Supabase
+const updateOrderStatusInSupabase = async (id: string, status: Order['status']): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status })
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    toast({
+      title: "Success",
+      description: `Order status updated to ${status}`,
+    });
+    return true;
+  } catch (error) {
+    console.error(`Error updating order ${id} status:`, error);
+    toast({
+      title: "Error",
+      description: "Failed to update order status",
+      variant: "destructive"
+    });
+    throw error;
+  }
+};
 
 const Orders = () => {
   const queryClient = useQueryClient();
@@ -33,15 +160,30 @@ const Orders = () => {
   const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
 
   // Queries
-  const { data: orders = [], isLoading } = useQuery({
+  const { data: orders = [], isLoading, error } = useQuery({
     queryKey: ['orders'],
-    queryFn: getOrders,
+    queryFn: fetchOrders,
   });
+
+  if (error) {
+    console.error('Error loading orders data:', error);
+  }
 
   const { data: selectedOrder } = useQuery({
     queryKey: ['order', selectedOrderId],
-    queryFn: () => selectedOrderId ? getOrder(selectedOrderId) : null,
+    queryFn: () => selectedOrderId ? fetchOrder(selectedOrderId) : null,
     enabled: !!selectedOrderId,
+  });
+
+  // Update status mutation
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: Order['status'] }) => 
+      updateOrderStatusInSupabase(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order', selectedOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+    },
   });
 
   // Filter orders based on search input and status
@@ -62,9 +204,8 @@ const Orders = () => {
     setViewDetailsOpen(true);
   };
 
-  const handleOrderStatusChange = () => {
-    queryClient.invalidateQueries({ queryKey: ['orders'] });
-    queryClient.invalidateQueries({ queryKey: ['order', selectedOrderId] });
+  const handleOrderStatusChange = (id: string, status: Order['status']) => {
+    updateStatusMutation.mutate({ id, status });
   };
 
   return (
@@ -137,7 +278,7 @@ const Orders = () => {
           {selectedOrder && (
             <OrderDetails 
               order={selectedOrder} 
-              onStatusChange={handleOrderStatusChange}
+              onStatusChange={(status) => handleOrderStatusChange(selectedOrder.id, status)}
             />
           )}
         </DialogContent>
