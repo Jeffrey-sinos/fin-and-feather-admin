@@ -4,7 +4,7 @@ export interface Customer {
   full_name: string | null;
   phone: string | null;
   address: string | null;
-  email?: string; // Add email field
+  email?: string; 
   created_at: string;
   updated_at: string;
 }
@@ -27,20 +27,14 @@ export interface OrderItem {
   products: Product; // This matches the Supabase response structure
   quantity: number;
   unit_price: number;
-  // Computed property to maintain backward compatibility
-  get product(): Product {
-    return this.products;
-  }
+  product?: Product; // Optional property to maintain compatibility
 }
 
 // Add a utility function to convert Supabase order item to our OrderItem type
 export function processOrderItems(items: any[]): OrderItem[] {
   return items.map(item => ({
     ...item,
-    // Add getter for backward compatibility
-    get product() { 
-      return item.products; 
-    }
+    product: item.products // For backward compatibility
   }));
 }
 
@@ -60,28 +54,15 @@ export interface Order {
     created_at: string;
     updated_at: string;
   };
-  // Optional user data with email
-  user?: {
-    email: string;
-  };
-  // Add a computed property for customer
-  get customer(): {
+  // Customer info computed from profiles and user data
+  customer?: {
     id: string;
     name: string | null;
     email: string;
     phone: string | null;
     address: string | null;
     created_at: string;
-  } {
-    return {
-      id: this.profiles?.id || this.user_id,
-      name: this.profiles?.full_name || 'Unknown',
-      email: this.user?.email || '',
-      phone: this.profiles?.phone || '',
-      address: this.profiles?.address || '',
-      created_at: this.profiles?.created_at || this.created_at,
-    };
-  }
+  };
 }
 
 // Add a utility function to process orders from Supabase
@@ -89,21 +70,16 @@ export function processOrder(order: any): Order {
   const processedOrder = {
     ...order,
     items: processOrderItems(order.items || []),
-  };
-  
-  // Add the customer getter to the processed order
-  Object.defineProperty(processedOrder, 'customer', {
-    get() {
-      return {
-        id: order.profiles?.id || order.user_id,
-        name: order.profiles?.full_name || 'Unknown',
-        email: order.user?.email || '',
-        phone: order.profiles?.phone || '',
-        address: order.profiles?.address || '',
-        created_at: order.profiles?.created_at || order.created_at,
-      };
+    customer: {
+      id: order.profiles?.id || order.user_id,
+      name: order.profiles?.full_name || 'Unknown',
+      // Get email from user_id - we'll use admin functions to retrieve this
+      email: order.user?.email || '',
+      phone: order.profiles?.phone || '',
+      address: order.profiles?.address || '',
+      created_at: order.profiles?.created_at || order.created_at,
     }
-  });
+  };
   
   return processedOrder;
 }

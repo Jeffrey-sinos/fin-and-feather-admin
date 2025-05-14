@@ -54,7 +54,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
       name: product?.name || '',
       description: product?.description || '',
       price: product?.price || 0,
-      category: product?.category || 'fish',
+      category: (product?.category as 'fish' | 'chicken') || 'fish',
       stock: product?.stock || 0,
       image_url: product?.image_url || '',
     },
