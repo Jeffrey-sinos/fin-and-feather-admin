@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/components/ui/use-toast';
 
 const Products = () => {
   const queryClient = useQueryClient();
@@ -51,19 +52,49 @@ const Products = () => {
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: (data: ProductFormData) => createProduct(data),
+    mutationFn: (data: ProductFormData) => {
+      // Ensure all required fields are present
+      const productData = {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        category: data.category,
+        stock: data.stock,
+        image_url: data.image_url || undefined
+      };
+      return createProduct(productData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       setIsCreateDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Product created successfully",
+      });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: ProductFormData }) => updateProduct(id, data),
+    mutationFn: ({ id, data }: { id: string; data: ProductFormData }) => {
+      // Ensure all required fields are present
+      const productData = {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        category: data.category,
+        stock: data.stock,
+        image_url: data.image_url || undefined
+      };
+      return updateProduct(id, productData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       setIsEditDialogOpen(false);
       setEditingProduct(null);
+      toast({
+        title: "Success",
+        description: "Product updated successfully",
+      });
     },
   });
 
@@ -72,6 +103,10 @@ const Products = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       setProductToDelete(null);
+      toast({
+        title: "Success",
+        description: "Product deleted successfully",
+      });
     },
   });
 
