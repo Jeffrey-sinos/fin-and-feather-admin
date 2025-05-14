@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
@@ -61,23 +60,22 @@ const fetchOrders = async (): Promise<Order[]> => {
         console.error('Error fetching customer data:', customerError);
       }
 
-      const processedItems = items?.map(item => ({
-        ...item,
-        product: item.products // Map to match our OrderItem type
-      })) || [];
-      
+      // Create the order object with all properties expected by the Order type
       return {
         ...order,
-        customer_id: order.user_id,
-        customer: {
-          id: customerData?.id || '',
-          name: customerData?.full_name || 'Unknown',
-          email: '',
-          phone: customerData?.phone || '',
-          address: customerData?.address || '',
-          created_at: customerData?.created_at || order.created_at
-        },
-        items: processedItems
+        items: items || [],
+        profiles: customerData || undefined,
+        // Needed for TypeScript - the getter in our type will handle this at runtime
+        get customer() {
+          return {
+            id: this.profiles?.id || this.user_id,
+            name: this.profiles?.full_name || 'Unknown',
+            email: '',
+            phone: this.profiles?.phone || '',
+            address: this.profiles?.address || '',
+            created_at: this.profiles?.created_at || this.created_at
+          }
+        }
       } as Order;
     }));
     
@@ -220,8 +218,8 @@ const Orders = () => {
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
       order.id.toLowerCase().includes(filterValue.toLowerCase()) ||
-      order.customer.name.toLowerCase().includes(filterValue.toLowerCase()) ||
-      order.customer.email.toLowerCase().includes(filterValue.toLowerCase());
+      (order.customer.name && order.customer.name.toLowerCase().includes(filterValue.toLowerCase())) ||
+      (order.customer.email && order.customer.email.toLowerCase().includes(filterValue.toLowerCase()));
     
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     

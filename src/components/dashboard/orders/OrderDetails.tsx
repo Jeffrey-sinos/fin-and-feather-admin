@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Card, 
@@ -172,22 +171,22 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onStatusChange }) =>
                 <TableRow key={item.id}>
                   <TableCell>
                     <div className="flex items-center space-x-3">
-                      {item.product.image_url && (
+                      {item.products.image_url && (
                         <img
-                          src={item.product.image_url}
-                          alt={item.product.name}
+                          src={item.products.image_url}
+                          alt={item.products.name}
                           className="h-10 w-10 rounded-md object-cover"
                         />
                       )}
                       <div>
-                        <div className="font-medium">{item.product.name}</div>
+                        <div className="font-medium">{item.products.name}</div>
                         <div className="text-sm text-muted-foreground">
                           <Badge variant="outline" className={
-                            item.product.category === 'fish'
+                            item.products.category === 'fish'
                               ? 'bg-ocean-100 text-ocean-800 border-ocean-200'
                               : 'bg-coral-100 text-coral-800 border-coral-200'
                           }>
-                            {item.product.category}
+                            {item.products.category}
                           </Badge>
                         </div>
                       </div>
