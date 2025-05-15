@@ -12,6 +12,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import Products from "./pages/admin/Products";
 import Customers from "./pages/admin/Customers";
 import Orders from "./pages/admin/Orders";
+import Inventory from "./pages/admin/Inventory";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/admin/products" element={<Products />} />
           <Route path="/admin/customers" element={<Customers />} />
           <Route path="/admin/orders" element={<Orders />} />
+          <Route path="/admin/inventory" element={<Inventory />} />
           
           {/* Legacy routes */}
           <Route path="/index" element={<Index />} />

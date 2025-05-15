@@ -144,9 +144,51 @@ const updateOrderStatusInSupabase = async (id: string, status: Order['status']):
     
     if (error) throw error;
     
+    // If order is completed, deduct the stock
+    if (status === 'completed') {
+      // First, get the order with its items to know which products to update
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .select(`id, items:order_items(product_id, quantity)`)
+        .eq('id', id)
+        .single();
+        
+      if (orderError) throw orderError;
+      
+      // Process each order item to deduct stock
+      if (order && order.items) {
+        for (const item of order.items) {
+          // Get current product stock
+          const { data: product, error: productError } = await supabase
+            .from('products')
+            .select('stock')
+            .eq('id', item.product_id)
+            .single();
+            
+          if (productError) {
+            console.error(`Error fetching product ${item.product_id}:`, productError);
+            continue;
+          }
+          
+          // Calculate new stock level (prevent negative stock)
+          const newStock = Math.max(0, product.stock - item.quantity);
+          
+          // Update product stock
+          const { error: updateError } = await supabase
+            .from('products')
+            .update({ stock: newStock })
+            .eq('id', item.product_id);
+            
+          if (updateError) {
+            console.error(`Error updating stock for product ${item.product_id}:`, updateError);
+          }
+        }
+      }
+    }
+    
     toast({
       title: "Success",
-      description: `Order status updated to ${status}`,
+      description: `Order status updated to ${status}${status === 'completed' ? ' and inventory updated' : ''}`,
     });
     return true;
   } catch (error) {
@@ -188,9 +230,11 @@ const Orders = () => {
     mutationFn: ({ id, status }: { id: string; status: Order['status'] }) => 
       updateOrderStatusInSupabase(id, status),
     onSuccess: () => {
+      // After updating order status, invalidate relevant queries to refresh the data
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['order', selectedOrderId] });
       queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] }); // Refresh products data to show updated stock
     },
   });
 
