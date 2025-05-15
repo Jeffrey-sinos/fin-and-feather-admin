@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Card, 
@@ -25,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { format } from 'date-fns';
+import { Mail, Phone, MapPin } from 'lucide-react';
 
 interface OrderDetailsProps {
   order: Order;
@@ -108,20 +110,34 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onStatusChange }) =>
                 <div className="text-muted-foreground">Name:</div>
                 <div className="font-medium">{order.customer?.name || 'Unknown'}</div>
               </div>
-              <div className="grid grid-cols-[100px_1fr] gap-1">
-                <div className="text-muted-foreground">Email:</div>
-                <div>{order.customer?.email || 'N/A'}</div>
-              </div>
+              
+              {order.customer?.email && (
+                <div className="grid grid-cols-[100px_1fr] gap-1">
+                  <div className="text-muted-foreground">Email:</div>
+                  <div className="flex items-center">
+                    <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                    {order.customer.email}
+                  </div>
+                </div>
+              )}
+              
               {order.customer?.phone && (
                 <div className="grid grid-cols-[100px_1fr] gap-1">
                   <div className="text-muted-foreground">Phone:</div>
-                  <div>{order.customer.phone}</div>
+                  <div className="flex items-center">
+                    <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                    {order.customer.phone}
+                  </div>
                 </div>
               )}
+              
               {order.customer?.address && (
                 <div className="grid grid-cols-[100px_1fr] gap-1">
                   <div className="text-muted-foreground">Address:</div>
-                  <div>{order.customer.address}</div>
+                  <div className="flex items-center">
+                    <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                    {order.customer.address}
+                  </div>
                 </div>
               )}
             </div>

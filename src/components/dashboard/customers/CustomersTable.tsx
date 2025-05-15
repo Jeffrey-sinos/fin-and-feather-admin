@@ -43,6 +43,12 @@ const CustomersTable: React.FC<CustomersTableProps> = ({
                 <TableCell className="font-medium">{customer.full_name || 'Unknown'}</TableCell>
                 <TableCell>
                   <div className="space-y-1">
+                    {customer.email && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Mail className="h-4 w-4 mr-2" />
+                        {customer.email}
+                      </div>
+                    )}
                     <div className="flex items-center text-sm text-muted-foreground">
                       <Phone className="h-4 w-4 mr-2" />
                       {customer.phone || 'N/A'}

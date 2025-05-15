@@ -60,18 +60,12 @@ const fetchOrders = async (): Promise<Order[]> => {
         // PGRST116 is "not found" error, which is fine
         console.error('Error fetching profile data:', profileError);
       }
-      
-      // For email, we can use RPC or REST function to access auth.users
-      // Since we can't directly query auth.users from the client
-      // For now, we'll simulate having the user email
-      const userData = { email: `user-${order.user_id.substring(0, 8)}@example.com` };
 
       // Create the processed order with all necessary data
       const processedOrder = {
         ...order,
         items: items || [],
-        profiles: profileData || undefined,
-        user: userData || undefined
+        profiles: profileData || undefined
       };
       
       return processOrder(processedOrder);
@@ -122,18 +116,12 @@ const fetchOrder = async (id: string): Promise<Order | null> => {
     if (profileError && profileError.code !== 'PGRST116') {
       console.error('Error fetching profile data:', profileError);
     }
-    
-    // For email, we can use RPC or REST function to access auth.users
-    // Since we can't directly query auth.users from the client
-    // For now, we'll simulate having the user email
-    const userData = { email: `user-${order.user_id.substring(0, 8)}@example.com` };
 
     // Process the order with our utility function
     return processOrder({
       ...order,
       items: items || [],
-      profiles: profileData || undefined,
-      user: userData || undefined
+      profiles: profileData || undefined
     });
   } catch (error) {
     console.error(`Error fetching order ${id}:`, error);

@@ -5,7 +5,7 @@ import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
 import CustomersTable from '@/components/dashboard/customers/CustomersTable';
 import { Customer } from '@/types';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, Mail } from 'lucide-react';
 import { 
   Dialog,
   DialogContent,
@@ -61,7 +61,8 @@ const Customers = () => {
   // Filter customers based on search input
   const filteredCustomers = customers.filter(customer => 
     (customer.full_name || '').toLowerCase().includes(filterValue.toLowerCase()) ||
-    (customer.phone || '').includes(filterValue)
+    (customer.phone || '').includes(filterValue) ||
+    (customer.email || '').toLowerCase().includes(filterValue.toLowerCase())
   );
 
   // Handlers
@@ -126,6 +127,15 @@ const Customers = () => {
                       <div className="text-muted-foreground">Name:</div>
                       <div className="font-medium">{selectedCustomer.full_name || 'Unknown'}</div>
                     </div>
+                    {selectedCustomer.email && (
+                      <div className="grid grid-cols-[100px_1fr] gap-1">
+                        <div className="text-muted-foreground">Email:</div>
+                        <div className="flex items-center">
+                          <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                          {selectedCustomer.email}
+                        </div>
+                      </div>
+                    )}
                     <div className="grid grid-cols-[100px_1fr] gap-1">
                       <div className="text-muted-foreground">Phone:</div>
                       <div>{selectedCustomer.phone || 'N/A'}</div>

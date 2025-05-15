@@ -4,7 +4,7 @@ export interface Customer {
   full_name: string | null;
   phone: string | null;
   address: string | null;
-  email?: string; 
+  email: string | null; 
   created_at: string;
   updated_at: string;
 }
@@ -31,7 +31,7 @@ export interface OrderItem {
 }
 
 // Add a utility function to convert Supabase order item to our OrderItem type
-export function processOrderItems(items: any[]): OrderItem[] {
+export const processOrderItems = (items: any[]): OrderItem[] => {
   return items.map(item => ({
     ...item,
     product: item.products // For backward compatibility
@@ -51,14 +51,15 @@ export interface Order {
     full_name: string | null;
     phone: string | null;
     address: string | null;
+    email: string | null;
     created_at: string;
     updated_at: string;
   };
-  // Customer info computed from profiles and user data
+  // Customer info computed from profiles
   customer?: {
     id: string;
     name: string | null;
-    email: string;
+    email: string | null;
     phone: string | null;
     address: string | null;
     created_at: string;
@@ -66,17 +67,16 @@ export interface Order {
 }
 
 // Add a utility function to process orders from Supabase
-export function processOrder(order: any): Order {
+export const processOrder = (order: any): Order => {
   const processedOrder = {
     ...order,
     items: processOrderItems(order.items || []),
     customer: {
       id: order.profiles?.id || order.user_id,
       name: order.profiles?.full_name || 'Unknown',
-      // Get email from user_id - we'll use admin functions to retrieve this
-      email: order.user?.email || '',
-      phone: order.profiles?.phone || '',
-      address: order.profiles?.address || '',
+      email: order.profiles?.email || null,
+      phone: order.profiles?.phone || null,
+      address: order.profiles?.address || null,
       created_at: order.profiles?.created_at || order.created_at,
     }
   };
