@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
 import StatsCard from '@/components/dashboard/overview/StatsCard';
 import RecentOrdersList from '@/components/dashboard/overview/RecentOrdersList';
-import { Package, ShoppingCart, Users, DollarSign } from 'lucide-react';
+import { Package, ShoppingCart, Users, DollarSign, Mail, FileText, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Order } from '@/types';
@@ -48,6 +48,27 @@ const fetchDashboardStats = async () => {
     if (revenueError) throw revenueError;
     
     const totalRevenue = revenueData?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0;
+    
+    // Get newsletter subscribers count
+    const { count: totalNewsletterSubscribers, error: newsletterError } = await supabase
+      .from('newsletter_subscriptions')
+      .select('*', { count: 'exact', head: true });
+    
+    if (newsletterError) throw newsletterError;
+
+    // Get blog posts count
+    const { count: totalBlogPosts, error: blogError } = await supabase
+      .from('blog_posts')
+      .select('*', { count: 'exact', head: true });
+    
+    if (blogError) throw blogError;
+
+    // Get SMS subscribers count
+    const { count: totalContactSubscribers, error: contactsError } = await supabase
+      .from('contact_numbers')
+      .select('*', { count: 'exact', head: true });
+    
+    if (contactsError) throw contactsError;
     
     // Get recent orders
     const { data: recentOrdersData, error: recentOrdersError } = await supabase
@@ -108,7 +129,10 @@ const fetchDashboardStats = async () => {
       totalProducts: totalProducts || 0,
       totalRevenue,
       lowStockProducts: lowStockProducts || 0,
-      recentOrders
+      recentOrders,
+      totalNewsletterSubscribers: totalNewsletterSubscribers || 0,
+      totalBlogPosts: totalBlogPosts || 0,
+      totalContactSubscribers: totalContactSubscribers || 0
     };
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
@@ -156,6 +180,24 @@ const Dashboard = () => {
             title="Total Revenue"
             value={isLoading ? '...' : `$${stats?.totalRevenue.toFixed(2) || '0.00'}`}
             icon={<DollarSign className="h-4 w-4 text-ocean-500" />}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <StatsCard
+            title="Newsletter Subscribers"
+            value={isLoading ? '...' : stats?.totalNewsletterSubscribers.toString() || '0'}
+            icon={<Mail className="h-4 w-4 text-ocean-500" />}
+          />
+          <StatsCard
+            title="Blog Posts"
+            value={isLoading ? '...' : stats?.totalBlogPosts.toString() || '0'}
+            icon={<FileText className="h-4 w-4 text-ocean-500" />}
+          />
+          <StatsCard
+            title="SMS Subscribers"
+            value={isLoading ? '...' : stats?.totalContactSubscribers.toString() || '0'}
+            icon={<MessageSquare className="h-4 w-4 text-ocean-500" />}
           />
         </div>
         
