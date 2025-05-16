@@ -52,7 +52,7 @@ const ProductAnalytics: React.FC<ProductAnalyticsProps> = ({
   }
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold">{title}</CardTitle>
@@ -61,40 +61,44 @@ const ProductAnalytics: React.FC<ProductAnalyticsProps> = ({
         <CardDescription>Based on order history</CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Product</TableHead>
-              <TableHead>Sold</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Stock</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((product) => (
-              <TableRow key={product.productId}>
-                <TableCell>{product.name}</TableCell>
-                <TableCell>{product.totalSold}</TableCell>
-                <TableCell>
-                  {product.category && (
-                    <Badge variant="outline" className={
-                      product.category === 'fish'
-                        ? 'bg-ocean-100 text-ocean-800 border-ocean-200'
-                        : 'bg-coral-100 text-coral-800 border-coral-200'
-                    }>
-                      {product.category}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell className={
-                  product.stock < 20 ? 'text-amber-600 font-medium' : ''
-                }>
-                  {product.stock}
-                </TableCell>
+        <div className="max-h-[200px] overflow-y-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Product</TableHead>
+                <TableHead className="text-right">Sold</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead className="text-right">Stock</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {products.map((product) => (
+                <TableRow key={product.productId}>
+                  <TableCell className="font-medium truncate max-w-[150px]" title={product.name}>
+                    {product.name}
+                  </TableCell>
+                  <TableCell className="text-right">{product.totalSold}</TableCell>
+                  <TableCell>
+                    {product.category && (
+                      <Badge variant="outline" className={
+                        product.category === 'fish'
+                          ? 'bg-ocean-100 text-ocean-800 border-ocean-200'
+                          : 'bg-coral-100 text-coral-800 border-coral-200'
+                      }>
+                        {product.category}
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className={
+                    `text-right ${product.stock < 20 ? 'text-amber-600 font-medium' : ''}`
+                  }>
+                    {product.stock}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );

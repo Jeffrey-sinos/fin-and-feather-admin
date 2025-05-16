@@ -87,7 +87,7 @@ const ProductSalesChart: React.FC<ProductSalesChartProps> = ({
         <CardDescription>Based on order history</CardDescription>
       </CardHeader>
       <CardContent className="pt-2">
-        <div className="h-[250px] w-full">
+        <div className="h-[200px] w-full">
           <ChartContainer 
             config={{
               products: {
@@ -98,20 +98,22 @@ const ProductSalesChart: React.FC<ProductSalesChartProps> = ({
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                layout="vertical"
                 data={sortedChartData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
               >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis
-                  type="number"
-                  tickFormatter={(value) => value.toString()}
-                />
-                <YAxis 
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis 
                   dataKey="name" 
-                  type="category" 
-                  width={100}
-                  tickLine={false}
+                  tick={{ fontSize: 10 }}
+                  interval={0}
+                  tickMargin={5}
+                  height={40}
+                  angle={-45}
+                  textAnchor="end"
+                />
+                <YAxis
+                  width={30}
+                  tickFormatter={(value) => value.toString()}
                 />
                 <Tooltip
                   content={({ active, payload }) => {
@@ -138,6 +140,7 @@ const ProductSalesChart: React.FC<ProductSalesChartProps> = ({
                 <Bar 
                   dataKey="value" 
                   name="Units Sold"
+                  minPointSize={3}
                 >
                   {sortedChartData.map((entry, index) => (
                     <Cell 
@@ -147,8 +150,8 @@ const ProductSalesChart: React.FC<ProductSalesChartProps> = ({
                   ))}
                   <LabelList 
                     dataKey="value" 
-                    position="right" 
-                    style={{ fill: 'var(--foreground)', fontSize: '12px' }} 
+                    position="top" 
+                    style={{ fill: 'var(--foreground)', fontSize: '10px', fontWeight: 'bold' }} 
                   />
                 </Bar>
               </BarChart>

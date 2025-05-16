@@ -266,48 +266,45 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Product Sales Charts Section */}
-        <div className="space-y-6">
+        {/* Product Analytics Section with Charts and Tables side by side */}
+        <div className="space-y-4">
           <h2 className="text-2xl font-bold">Product Sales Analytics</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          {/* Most Sold Products Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
             {!isLoading && stats?.mostSoldProducts && (
-              <ProductSalesChart 
-                title="Top Selling Products" 
-                products={stats.mostSoldProducts} 
-                type="most"
-                icon={<TrendingUp className="h-4 w-4 text-green-500" />}
-              />
-            )}
-            
-            {!isLoading && stats?.leastSoldProducts && (
-              <ProductSalesChart 
-                title="Least Selling Products" 
-                products={stats.leastSoldProducts} 
-                type="least"
-                icon={<TrendingDown className="h-4 w-4 text-amber-500" />}
-              />
+              <>
+                <ProductSalesChart 
+                  title="Top Selling Products" 
+                  products={stats.mostSoldProducts} 
+                  type="most"
+                  icon={<TrendingUp className="h-4 w-4 text-green-500" />}
+                />
+                <ProductAnalytics 
+                  title="Top Selling Products Details" 
+                  products={stats.mostSoldProducts} 
+                  icon={<TrendingUp className="h-4 w-4 text-green-500" />}
+                />
+              </>
             )}
           </div>
-        </div>
-        
-        {/* Analytics Table Section */}
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold">Product Analytics</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {!isLoading && stats?.mostSoldProducts && (
-              <ProductAnalytics 
-                title="Top Selling Products" 
-                products={stats.mostSoldProducts} 
-                icon={<TrendingUp className="h-4 w-4 text-green-500" />}
-              />
-            )}
-            
+          
+          {/* Least Sold Products Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
             {!isLoading && stats?.leastSoldProducts && (
-              <ProductAnalytics 
-                title="Least Selling Products" 
-                products={stats.leastSoldProducts} 
-                icon={<TrendingDown className="h-4 w-4 text-amber-500" />}
-              />
+              <>
+                <ProductSalesChart 
+                  title="Least Selling Products" 
+                  products={stats.leastSoldProducts} 
+                  type="least"
+                  icon={<TrendingDown className="h-4 w-4 text-amber-500" />}
+                />
+                <ProductAnalytics 
+                  title="Least Selling Products Details" 
+                  products={stats.leastSoldProducts} 
+                  icon={<TrendingDown className="h-4 w-4 text-amber-500" />}
+                />
+              </>
             )}
           </div>
         </div>
