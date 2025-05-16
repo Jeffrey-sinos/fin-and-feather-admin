@@ -60,37 +60,39 @@ const ProductAnalytics: React.FC<ProductAnalyticsProps> = ({
         </div>
         <CardDescription>Based on order history</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="max-h-[200px] overflow-y-auto">
+      <CardContent className="p-0 px-4 pb-4">
+        <div className="max-h-[160px] overflow-y-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead className="text-right">Sold</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Stock</TableHead>
+                <TableHead className="text-xs">Product</TableHead>
+                <TableHead className="text-right text-xs">Sold</TableHead>
+                <TableHead className="text-xs">Category</TableHead>
+                <TableHead className="text-right text-xs">Stock</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {products.map((product) => (
                 <TableRow key={product.productId}>
-                  <TableCell className="font-medium truncate max-w-[150px]" title={product.name}>
+                  <TableCell className="font-medium truncate max-w-[120px] text-xs py-2" title={product.name}>
                     {product.name}
                   </TableCell>
-                  <TableCell className="text-right">{product.totalSold}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-right text-xs py-2">{product.totalSold}</TableCell>
+                  <TableCell className="py-2">
                     {product.category && (
                       <Badge variant="outline" className={
-                        product.category === 'fish'
-                          ? 'bg-ocean-100 text-ocean-800 border-ocean-200'
-                          : 'bg-coral-100 text-coral-800 border-coral-200'
+                        `text-xs py-0 px-1.5 ${
+                          product.category === 'fish'
+                            ? 'bg-ocean-100 text-ocean-800 border-ocean-200'
+                            : 'bg-coral-100 text-coral-800 border-coral-200'
+                        }`
                       }>
                         {product.category}
                       </Badge>
                     )}
                   </TableCell>
                   <TableCell className={
-                    `text-right ${product.stock < 20 ? 'text-amber-600 font-medium' : ''}`
+                    `text-right text-xs py-2 ${product.stock < 20 ? 'text-amber-600 font-medium' : ''}`
                   }>
                     {product.stock}
                   </TableCell>
