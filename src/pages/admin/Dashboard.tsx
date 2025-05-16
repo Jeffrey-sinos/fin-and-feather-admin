@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
@@ -10,6 +9,7 @@ import { toast } from '@/components/ui/use-toast';
 import { Order } from '@/types';
 import ProductAnalytics from '@/components/dashboard/analytics/ProductAnalytics';
 import LowStockAlert from '@/components/dashboard/analytics/LowStockAlert';
+import ProductSalesChart from '@/components/dashboard/analytics/ProductSalesChart';
 
 const fetchDashboardStats = async () => {
   try {
@@ -266,7 +266,31 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Analytics Section */}
+        {/* Product Sales Charts Section */}
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold">Product Sales Analytics</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {!isLoading && stats?.mostSoldProducts && (
+              <ProductSalesChart 
+                title="Top Selling Products" 
+                products={stats.mostSoldProducts} 
+                type="most"
+                icon={<TrendingUp className="h-4 w-4 text-green-500" />}
+              />
+            )}
+            
+            {!isLoading && stats?.leastSoldProducts && (
+              <ProductSalesChart 
+                title="Least Selling Products" 
+                products={stats.leastSoldProducts} 
+                type="least"
+                icon={<TrendingDown className="h-4 w-4 text-amber-500" />}
+              />
+            )}
+          </div>
+        </div>
+        
+        {/* Analytics Table Section */}
         <div className="space-y-6">
           <h2 className="text-2xl font-bold">Product Analytics</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
