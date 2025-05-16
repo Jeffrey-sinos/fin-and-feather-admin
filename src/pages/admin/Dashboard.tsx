@@ -4,10 +4,12 @@ import { useQuery } from '@tanstack/react-query';
 import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
 import StatsCard from '@/components/dashboard/overview/StatsCard';
 import RecentOrdersList from '@/components/dashboard/overview/RecentOrdersList';
-import { Package, ShoppingCart, Users, DollarSign, Mail, FileText, MessageSquare } from 'lucide-react';
+import { Package, ShoppingCart, Users, DollarSign, Mail, FileText, MessageSquare, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Order } from '@/types';
+import ProductAnalytics from '@/components/dashboard/analytics/ProductAnalytics';
+import LowStockAlert from '@/components/dashboard/analytics/LowStockAlert';
 
 const fetchDashboardStats = async () => {
   try {
@@ -32,11 +34,11 @@ const fetchDashboardStats = async () => {
     
     if (productsError) throw productsError;
       
-    // Get low stock products count
+    // Get low stock products count (changed threshold to 20)
     const { count: lowStockProducts, error: lowStockError } = await supabase
       .from('products')
       .select('*', { count: 'exact', head: true })
-      .lt('stock', 10);
+      .lt('stock', 20);
     
     if (lowStockError) throw lowStockError;
       
@@ -69,6 +71,60 @@ const fetchDashboardStats = async () => {
       .select('*', { count: 'exact', head: true });
     
     if (contactsError) throw contactsError;
+
+    // Get products with low stock (less than 20) for detailed alert
+    const { data: lowStockProductsData, error: lowStockProductsError } = await supabase
+      .from('products')
+      .select('*')
+      .lt('stock', 20)
+      .order('stock', { ascending: true });
+    
+    if (lowStockProductsError) throw lowStockProductsError;
+    
+    // Fetch sales analytics - most and least sold products
+    const { data: orderItemsData, error: orderItemsError } = await supabase
+      .from('order_items')
+      .select(`
+        quantity,
+        product_id,
+        products (
+          id,
+          name,
+          category,
+          stock,
+          price
+        )
+      `);
+    
+    if (orderItemsError) throw orderItemsError;
+    
+    // Calculate product sales
+    const productSalesMap = new Map();
+    orderItemsData?.forEach(item => {
+      const productId = item.product_id;
+      const quantity = item.quantity;
+      const currentQuantity = productSalesMap.get(productId) || 0;
+      productSalesMap.set(productId, currentQuantity + quantity);
+    });
+    
+    // Convert to array and sort
+    const productSalesArray = Array.from(productSalesMap.entries()).map(([productId, totalSold]) => {
+      const productDetails = orderItemsData?.find(item => item.product_id === productId)?.products;
+      return {
+        productId,
+        totalSold,
+        name: productDetails?.name || 'Unknown Product',
+        category: productDetails?.category || 'Unknown',
+        price: productDetails?.price || 0,
+        stock: productDetails?.stock || 0
+      };
+    });
+    
+    // Sort to find most and least sold
+    const sortedProductSales = [...productSalesArray].sort((a, b) => b.totalSold - a.totalSold);
+    
+    const mostSoldProducts = sortedProductSales.slice(0, 5);
+    const leastSoldProducts = [...sortedProductSales].sort((a, b) => a.totalSold - b.totalSold).slice(0, 5);
     
     // Get recent orders
     const { data: recentOrdersData, error: recentOrdersError } = await supabase
@@ -132,7 +188,10 @@ const fetchDashboardStats = async () => {
       recentOrders,
       totalNewsletterSubscribers: totalNewsletterSubscribers || 0,
       totalBlogPosts: totalBlogPosts || 0,
-      totalContactSubscribers: totalContactSubscribers || 0
+      totalContactSubscribers: totalContactSubscribers || 0,
+      mostSoldProducts,
+      leastSoldProducts,
+      lowStockProductsData
     };
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
@@ -200,23 +259,32 @@ const Dashboard = () => {
             icon={<MessageSquare className="h-4 w-4 text-ocean-500" />}
           />
         </div>
-        
-        {stats?.lowStockProducts > 0 && (
-          <div className="rounded-md bg-yellow-50 p-4 border border-yellow-100">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-yellow-800">Inventory Alert</h3>
-                <div className="mt-2 text-sm text-yellow-700">
-                  <p>You have {stats.lowStockProducts} products with low stock (less than 10 items). <a href="/admin/products" className="font-medium underline">Check inventory</a>.</p>
-                </div>
-              </div>
-            </div>
+
+        {/* Analytics Section */}
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold">Product Analytics</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {!isLoading && stats?.mostSoldProducts && (
+              <ProductAnalytics 
+                title="Top Selling Products" 
+                products={stats.mostSoldProducts} 
+                icon={<TrendingUp className="h-4 w-4 text-green-500" />}
+              />
+            )}
+            
+            {!isLoading && stats?.leastSoldProducts && (
+              <ProductAnalytics 
+                title="Least Selling Products" 
+                products={stats.leastSoldProducts} 
+                icon={<TrendingDown className="h-4 w-4 text-amber-500" />}
+              />
+            )}
           </div>
+        </div>
+        
+        {/* Low Stock Alert Section */}
+        {!isLoading && stats?.lowStockProductsData && stats.lowStockProductsData.length > 0 && (
+          <LowStockAlert products={stats.lowStockProductsData} />
         )}
         
         <RecentOrdersList orders={stats?.recentOrders || []} />
