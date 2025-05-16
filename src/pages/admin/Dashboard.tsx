@@ -219,6 +219,7 @@ const Dashboard = () => {
       <div className="space-y-6">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         
+        {/* Quick Stats Section */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             title="Total Orders"
@@ -241,6 +242,11 @@ const Dashboard = () => {
             icon={<DollarSign className="h-4 w-4 text-ocean-500" />}
           />
         </div>
+
+        {/* Low Stock Alert Section - Move it up for more visibility */}
+        {!isLoading && stats?.lowStockProductsData && stats.lowStockProductsData.length > 0 && (
+          <LowStockAlert products={stats.lowStockProductsData} />
+        )}
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <StatsCard
@@ -281,11 +287,6 @@ const Dashboard = () => {
             )}
           </div>
         </div>
-        
-        {/* Low Stock Alert Section */}
-        {!isLoading && stats?.lowStockProductsData && stats.lowStockProductsData.length > 0 && (
-          <LowStockAlert products={stats.lowStockProductsData} />
-        )}
         
         <RecentOrdersList orders={stats?.recentOrders || []} />
       </div>
