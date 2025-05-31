@@ -16,6 +16,7 @@ import Inventory from "./pages/admin/Inventory";
 import Newsletter from "./pages/admin/Newsletter";
 import Blog from "./pages/admin/Blog";
 import ContactSubscribers from "./pages/admin/ContactSubscribers";
+import ProductAnalytics from "./pages/admin/ProductAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/admin/customers" element={<Customers />} />
           <Route path="/admin/orders" element={<Orders />} />
           <Route path="/admin/inventory" element={<Inventory />} />
+          <Route path="/admin/analytics" element={<ProductAnalytics />} />
           <Route path="/admin/newsletter" element={<Newsletter />} />
           <Route path="/admin/blog" element={<Blog />} />
           <Route path="/admin/contacts" element={<ContactSubscribers />} />

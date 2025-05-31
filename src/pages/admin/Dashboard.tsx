@@ -1,15 +1,14 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
 import StatsCard from '@/components/dashboard/overview/StatsCard';
 import RecentOrdersList from '@/components/dashboard/overview/RecentOrdersList';
-import { Package, ShoppingCart, Users, DollarSign, Mail, FileText, MessageSquare, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { Package, ShoppingCart, Users, DollarSign, Mail, FileText, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Order } from '@/types';
-import ProductAnalytics from '@/components/dashboard/analytics/ProductAnalytics';
 import LowStockAlert from '@/components/dashboard/analytics/LowStockAlert';
-import ProductSalesChart from '@/components/dashboard/analytics/ProductSalesChart';
 
 const fetchDashboardStats = async () => {
   try {
@@ -81,51 +80,6 @@ const fetchDashboardStats = async () => {
     
     if (lowStockProductsError) throw lowStockProductsError;
     
-    // Fetch sales analytics - most and least sold products
-    const { data: orderItemsData, error: orderItemsError } = await supabase
-      .from('order_items')
-      .select(`
-        quantity,
-        product_id,
-        products (
-          id,
-          name,
-          category,
-          stock,
-          price
-        )
-      `);
-    
-    if (orderItemsError) throw orderItemsError;
-    
-    // Calculate product sales
-    const productSalesMap = new Map();
-    orderItemsData?.forEach(item => {
-      const productId = item.product_id;
-      const quantity = item.quantity;
-      const currentQuantity = productSalesMap.get(productId) || 0;
-      productSalesMap.set(productId, currentQuantity + quantity);
-    });
-    
-    // Convert to array and sort
-    const productSalesArray = Array.from(productSalesMap.entries()).map(([productId, totalSold]) => {
-      const productDetails = orderItemsData?.find(item => item.product_id === productId)?.products;
-      return {
-        productId,
-        totalSold,
-        name: productDetails?.name || 'Unknown Product',
-        category: productDetails?.category || 'Unknown',
-        price: productDetails?.price || 0,
-        stock: productDetails?.stock || 0
-      };
-    });
-    
-    // Sort to find most and least sold
-    const sortedProductSales = [...productSalesArray].sort((a, b) => b.totalSold - a.totalSold);
-    
-    const mostSoldProducts = sortedProductSales.slice(0, 5);
-    const leastSoldProducts = [...sortedProductSales].sort((a, b) => a.totalSold - b.totalSold).slice(0, 5);
-    
     // Get recent orders
     const { data: recentOrdersData, error: recentOrdersError } = await supabase
       .from('orders')
@@ -189,8 +143,6 @@ const fetchDashboardStats = async () => {
       totalNewsletterSubscribers: totalNewsletterSubscribers || 0,
       totalBlogPosts: totalBlogPosts || 0,
       totalContactSubscribers: totalContactSubscribers || 0,
-      mostSoldProducts,
-      leastSoldProducts,
       lowStockProductsData
     };
   } catch (error) {
@@ -243,7 +195,7 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Low Stock Alert Section - Move it up for more visibility */}
+        {/* Low Stock Alert Section */}
         {!isLoading && stats?.lowStockProductsData && stats.lowStockProductsData.length > 0 && (
           <LowStockAlert products={stats.lowStockProductsData} />
         )}
@@ -264,49 +216,6 @@ const Dashboard = () => {
             value={isLoading ? '...' : stats?.totalContactSubscribers.toString() || '0'}
             icon={<MessageSquare className="h-4 w-4 text-ocean-500" />}
           />
-        </div>
-
-        {/* Product Analytics Section with Charts and Tables side by side */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold">Product Sales Analytics</h2>
-          
-          {/* Most Sold Products Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-            {!isLoading && stats?.mostSoldProducts && (
-              <>
-                <ProductSalesChart 
-                  title="Top Selling Products" 
-                  products={stats.mostSoldProducts} 
-                  type="most"
-                  icon={<TrendingUp className="h-4 w-4 text-green-500" />}
-                />
-                <ProductAnalytics 
-                  title="Top Selling Products Details" 
-                  products={stats.mostSoldProducts} 
-                  icon={<TrendingUp className="h-4 w-4 text-green-500" />}
-                />
-              </>
-            )}
-          </div>
-          
-          {/* Least Sold Products Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-            {!isLoading && stats?.leastSoldProducts && (
-              <>
-                <ProductSalesChart 
-                  title="Least Selling Products" 
-                  products={stats.leastSoldProducts} 
-                  type="least"
-                  icon={<TrendingDown className="h-4 w-4 text-amber-500" />}
-                />
-                <ProductAnalytics 
-                  title="Least Selling Products Details" 
-                  products={stats.leastSoldProducts} 
-                  icon={<TrendingDown className="h-4 w-4 text-amber-500" />}
-                />
-              </>
-            )}
-          </div>
         </div>
         
         <RecentOrdersList orders={stats?.recentOrders || []} />
