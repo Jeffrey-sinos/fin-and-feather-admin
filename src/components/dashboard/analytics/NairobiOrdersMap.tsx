@@ -16,6 +16,13 @@ interface Order {
   };
 }
 
+interface LocationData {
+  address: string;
+  orders: Order[];
+  totalValue: number;
+  count: number;
+}
+
 interface NairobiOrdersMapProps {
   orders: Order[];
 }
@@ -28,7 +35,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
 
   // Process order locations
   const locationData = React.useMemo(() => {
-    const locationMap = new Map();
+    const locationMap = new Map<string, LocationData>();
     
     orders.forEach(order => {
       const address = order.profiles?.address;
@@ -52,7 +59,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
   }, [orders]);
 
   // Nairobi area coordinates (approximate)
-  const nairobiAreas = {
+  const nairobiAreas: Record<string, [number, number]> = {
     'westlands': [-1.2672, 36.8107],
     'karen': [-1.3197, 36.6859],
     'kilimani': [-1.2921, 36.7874],
@@ -102,16 +109,17 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
 
       map.current.on('load', () => {
         // Add markers for each location
-        locationData.forEach((location, index) => {
+        locationData.forEach((location) => {
           // Try to find coordinates for the area
-          let coordinates = [36.8219, -1.2921]; // Default to Nairobi center
+          let coordinates: [number, number] = [36.8219, -1.2921]; // Default to Nairobi center
           
           const areaName = Object.keys(nairobiAreas).find(area => 
             location.address.toLowerCase().includes(area)
           );
           
           if (areaName) {
-            coordinates = [nairobiAreas[areaName][1], nairobiAreas[areaName][0]];
+            const coords = nairobiAreas[areaName];
+            coordinates = [coords[1], coords[0]]; // Swap lat/lng for mapbox
           } else {
             // Add some random offset for areas we don't have exact coordinates
             coordinates = [

@@ -11,6 +11,16 @@ import SalesTimelineChart from '@/components/dashboard/analytics/SalesTimelineCh
 import CategoryPieChart from '@/components/dashboard/analytics/CategoryPieChart';
 import NairobiOrdersMap from '@/components/dashboard/analytics/NairobiOrdersMap';
 
+interface OrderWithLocation {
+  id: string;
+  total_amount: number;
+  created_at: string;
+  profiles: {
+    address: string;
+    full_name: string;
+  };
+}
+
 const fetchProductAnalytics = async () => {
   try {
     // Fetch sales analytics - most and least sold products
@@ -46,15 +56,38 @@ const fetchProductAnalytics = async () => {
         id,
         total_amount,
         created_at,
-        profiles!inner(address, full_name)
+        user_id
       `)
       .eq('status', 'completed');
     
     if (locationsError) throw locationsError;
+
+    // Fetch profiles separately to avoid join issues
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, address, full_name')
+      .not('address', 'is', null);
+    
+    if (profilesError) throw profilesError;
+
+    // Combine orders with profiles
+    const ordersWithProfileData: OrderWithLocation[] = [];
+    ordersWithLocations?.forEach(order => {
+      const profile = profilesData?.find(p => p.id === order.user_id);
+      if (profile && profile.address) {
+        ordersWithProfileData.push({
+          ...order,
+          profiles: {
+            address: profile.address,
+            full_name: profile.full_name || 'Unknown'
+          }
+        });
+      }
+    });
     
     // Calculate product sales
-    const productSalesMap = new Map();
-    const categorySalesMap = new Map();
+    const productSalesMap = new Map<string, number>();
+    const categorySalesMap = new Map<string, number>();
     
     orderItemsData?.forEach(item => {
       const productId = item.product_id;
@@ -118,7 +151,7 @@ const fetchProductAnalytics = async () => {
       leastSoldProducts,
       categoryData,
       timelineData: groupedTimelineData,
-      ordersWithLocations
+      ordersWithLocations: ordersWithProfileData
     };
   } catch (error) {
     console.error('Error fetching product analytics:', error);
