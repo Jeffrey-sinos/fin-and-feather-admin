@@ -2,11 +2,14 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
-import { TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, BarChart3, Map } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import ProductAnalytics from '@/components/dashboard/analytics/ProductAnalytics';
 import ProductSalesChart from '@/components/dashboard/analytics/ProductSalesChart';
+import SalesTimelineChart from '@/components/dashboard/analytics/SalesTimelineChart';
+import CategoryPieChart from '@/components/dashboard/analytics/CategoryPieChart';
+import NairobiOrdersMap from '@/components/dashboard/analytics/NairobiOrdersMap';
 
 const fetchProductAnalytics = async () => {
   try {
@@ -26,14 +29,45 @@ const fetchProductAnalytics = async () => {
       `);
     
     if (orderItemsError) throw orderItemsError;
+
+    // Fetch sales timeline data
+    const { data: ordersData, error: ordersError } = await supabase
+      .from('orders')
+      .select('total_amount, created_at, status')
+      .eq('status', 'completed')
+      .order('created_at', { ascending: true });
+    
+    if (ordersError) throw ordersError;
+
+    // Fetch orders with customer location data for map
+    const { data: ordersWithLocations, error: locationsError } = await supabase
+      .from('orders')
+      .select(`
+        id,
+        total_amount,
+        created_at,
+        profiles!inner(address, full_name)
+      `)
+      .eq('status', 'completed');
+    
+    if (locationsError) throw locationsError;
     
     // Calculate product sales
     const productSalesMap = new Map();
+    const categorySalesMap = new Map();
+    
     orderItemsData?.forEach(item => {
       const productId = item.product_id;
       const quantity = item.quantity;
+      const category = item.products?.category || 'other';
+      
+      // Product sales
       const currentQuantity = productSalesMap.get(productId) || 0;
       productSalesMap.set(productId, currentQuantity + quantity);
+      
+      // Category sales
+      const currentCategoryQuantity = categorySalesMap.get(category) || 0;
+      categorySalesMap.set(category, currentCategoryQuantity + quantity);
     });
     
     // Convert to array and sort
@@ -54,10 +88,37 @@ const fetchProductAnalytics = async () => {
     
     const mostSoldProducts = sortedProductSales.slice(0, 10);
     const leastSoldProducts = [...sortedProductSales].sort((a, b) => a.totalSold - b.totalSold).slice(0, 10);
-    
+
+    // Prepare category data for pie chart
+    const categoryData = Array.from(categorySalesMap.entries()).map(([category, quantity]) => ({
+      name: category,
+      value: quantity,
+      fill: category === 'fish' ? '#0EA5E9' : category === 'chicken' ? '#F97316' : '#8B5CF6'
+    }));
+
+    // Prepare timeline data
+    const timelineData = ordersData?.map(order => ({
+      date: new Date(order.created_at).toLocaleDateString(),
+      sales: Number(order.total_amount)
+    })) || [];
+
+    // Group timeline data by date
+    const groupedTimelineData = timelineData.reduce((acc, curr) => {
+      const existing = acc.find(item => item.date === curr.date);
+      if (existing) {
+        existing.sales += curr.sales;
+      } else {
+        acc.push({ ...curr });
+      }
+      return acc;
+    }, [] as typeof timelineData);
+
     return {
       mostSoldProducts,
-      leastSoldProducts
+      leastSoldProducts,
+      categoryData,
+      timelineData: groupedTimelineData,
+      ordersWithLocations
     };
   } catch (error) {
     console.error('Error fetching product analytics:', error);
@@ -82,17 +143,40 @@ const ProductAnalyticsPage = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Product Analytics</h1>
           <BarChart3 className="h-8 w-8 text-ocean-500" />
         </div>
         
-        {/* Most Sold Products Section */}
-        <div className="space-y-4">
+        {/* Sales Overview Section */}
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold">Sales Overview</h2>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Sales Timeline Chart */}
+            {!isLoading && analytics?.timelineData && (
+              <SalesTimelineChart 
+                title="Sales Timeline" 
+                data={analytics.timelineData}
+              />
+            )}
+            
+            {/* Category Distribution Pie Chart */}
+            {!isLoading && analytics?.categoryData && (
+              <CategoryPieChart 
+                title="Sales by Category" 
+                data={analytics.categoryData}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Top Selling Products Section */}
+        <div className="space-y-6">
           <h2 className="text-2xl font-bold">Top Selling Products</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {!isLoading && analytics?.mostSoldProducts && (
               <>
                 <ProductSalesChart 
@@ -111,11 +195,11 @@ const ProductAnalyticsPage = () => {
           </div>
         </div>
         
-        {/* Least Sold Products Section */}
-        <div className="space-y-4">
+        {/* Least Selling Products Section */}
+        <div className="space-y-6">
           <h2 className="text-2xl font-bold">Least Selling Products</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {!isLoading && analytics?.leastSoldProducts && (
               <>
                 <ProductSalesChart 
@@ -133,15 +217,30 @@ const ProductAnalyticsPage = () => {
             )}
           </div>
         </div>
+
+        {/* Geographic Distribution Section */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold">Geographic Distribution</h2>
+            <Map className="h-6 w-6 text-ocean-500" />
+          </div>
+          
+          {!isLoading && analytics?.ordersWithLocations && (
+            <NairobiOrdersMap orders={analytics.ordersWithLocations} />
+          )}
+        </div>
         
         {isLoading && (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">Loading product analytics...</p>
+          <div className="text-center py-12">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent" role="status">
+              <span className="sr-only">Loading...</span>
+            </div>
+            <p className="mt-4 text-muted-foreground">Loading analytics data...</p>
           </div>
         )}
         
         {!isLoading && (!analytics?.mostSoldProducts?.length && !analytics?.leastSoldProducts?.length) && (
-          <div className="text-center py-8">
+          <div className="text-center py-12">
             <p className="text-muted-foreground">No sales data available. Add some orders to see analytics.</p>
           </div>
         )}
