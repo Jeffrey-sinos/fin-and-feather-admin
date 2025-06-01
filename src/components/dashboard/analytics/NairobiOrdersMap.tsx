@@ -88,15 +88,15 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
     try {
       // Dynamically import mapbox-gl
       const mapboxModule = await import('mapbox-gl');
-      const mapboxgl = mapboxModule.default || mapboxModule;
+      const mapboxgl = mapboxModule.default;
       
-      if (!mapContainer.current) {
+      if (!mapContainer.current || !mapboxgl) {
         setIsLoading(false);
         return;
       }
 
-      // Set access token
-      mapboxgl.accessToken = mapboxToken;
+      // Set access token on the imported module
+      (mapboxgl as any).accessToken = mapboxToken;
       
       // Initialize map
       map.current = new mapboxgl.Map({
