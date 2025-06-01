@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
-import { TrendingUp, TrendingDown, BarChart3, Map } from 'lucide-react';
+import { TrendingUp, TrendingDown, BarChart3, Map as MapIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import ProductAnalytics from '@/components/dashboard/analytics/ProductAnalytics';
@@ -255,7 +254,7 @@ const ProductAnalyticsPage = () => {
         <div className="space-y-6">
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-bold">Geographic Distribution</h2>
-            <Map className="h-6 w-6 text-ocean-500" />
+            <MapIcon className="h-6 w-6 text-ocean-500" />
           </div>
           
           {!isLoading && analytics?.ordersWithLocations && (

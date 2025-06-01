@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Map, MapPin } from 'lucide-react';
+import { Map as MapIcon, MapPin } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 
 interface Order {
@@ -178,7 +178,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold">Nairobi Orders Distribution</CardTitle>
-          <Map className="h-4 w-4 text-blue-500" />
+          <MapIcon className="h-4 w-4 text-blue-500" />
         </div>
         <CardDescription>Geographic distribution of orders across Nairobi</CardDescription>
       </CardHeader>
