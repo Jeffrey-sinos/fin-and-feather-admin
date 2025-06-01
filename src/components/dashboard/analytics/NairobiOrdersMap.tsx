@@ -86,20 +86,27 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
     setIsLoading(true);
 
     try {
-      // Dynamically import mapbox-gl
-      const mapboxModule = await import('mapbox-gl');
-      const mapboxgl = mapboxModule.default;
+      // Import mapbox-gl CSS first
+      await import('mapbox-gl/dist/mapbox-gl.css');
       
-      if (!mapContainer.current || !mapboxgl) {
+      // Then import the mapbox-gl module
+      const mapboxgl = await import('mapbox-gl');
+      
+      if (!mapContainer.current) {
         setIsLoading(false);
         return;
       }
 
-      // Set access token on the imported module
-      (mapboxgl as any).accessToken = mapboxToken;
+      console.log('Mapbox module loaded:', mapboxgl);
+      console.log('Setting access token:', mapboxToken);
+
+      // Set access token on the default export
+      mapboxgl.default.accessToken = mapboxToken;
+      
+      console.log('Creating map...');
       
       // Initialize map
-      map.current = new mapboxgl.Map({
+      map.current = new mapboxgl.default.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/light-v11',
         center: [36.8219, -1.2921], // Nairobi center
@@ -107,9 +114,11 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
         pitch: 0,
       });
 
+      console.log('Map created:', map.current);
+
       // Add navigation controls
       map.current.addControl(
-        new mapboxgl.NavigationControl(),
+        new mapboxgl.default.NavigationControl(),
         'top-right'
       );
 
@@ -136,14 +145,16 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
             ];
           }
 
+          console.log('Adding marker for:', location.address, 'at:', coordinates);
+
           // Create a marker
-          const marker = new mapboxgl.Marker({
+          const marker = new mapboxgl.default.Marker({
             color: '#0EA5E9',
             scale: Math.min(2, 0.5 + (location.count / 5))
           })
             .setLngLat(coordinates)
             .setPopup(
-              new mapboxgl.Popup({ offset: 25 })
+              new mapboxgl.default.Popup({ offset: 25 })
                 .setHTML(`
                   <div class="p-2">
                     <h3 class="font-bold">${location.address}</h3>
