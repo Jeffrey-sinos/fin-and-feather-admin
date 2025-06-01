@@ -109,7 +109,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
 
       map.current.on('load', () => {
         // Add markers for each location
-        locationData.forEach((location) => {
+        locationData.forEach((location: LocationData) => {
           // Try to find coordinates for the area
           let coordinates: [number, number] = [36.8219, -1.2921]; // Default to Nairobi center
           
@@ -210,7 +210,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
               <h4 className="font-medium">Order Locations Summary:</h4>
               {locationData.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {locationData.map((location, index) => (
+                  {locationData.map((location: LocationData, index: number) => (
                     <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-blue-500" />
