@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Map as MapIcon, MapPin } from 'lucide-react';
+import { MapIcon as MapIconLucide, MapPin } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 
 interface Order {
@@ -30,13 +30,13 @@ interface NairobiOrdersMapProps {
 const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<any>(null);
-  const [mapboxToken, setMapboxToken] = useState('');
+  const [mapboxToken, setMapboxToken] = useState('pk.eyJ1IjoiamVmMjUiLCJhIjoiY21iZHp1bTIzMHVhdTJqcW5rZGJmMmphcyJ9.PekGHROecq3wkVAerCwfXw');
   const [isTokenSet, setIsTokenSet] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // Process order locations
   const locationData = React.useMemo(() => {
-    const locationMap = new Map<string, LocationData>();
+    const locationMap: Map<string, LocationData> = new Map();
     
     orders.forEach(order => {
       const address = order.profiles?.address;
@@ -88,7 +88,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
     try {
       // Dynamically import mapbox-gl
       const mapboxModule = await import('mapbox-gl');
-      const mapboxgl = mapboxModule.default;
+      const mapboxgl = mapboxModule.default || mapboxModule;
       
       if (!mapContainer.current) {
         setIsLoading(false);
@@ -114,6 +114,8 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
       );
 
       map.current.on('load', () => {
+        console.log('Map loaded successfully');
+        
         // Add markers for each location
         locationData.forEach((location: LocationData) => {
           // Try to find coordinates for the area
@@ -176,7 +178,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
       setIsLoading(false);
       toast({
         title: "Error",
-        description: "Failed to initialize map",
+        description: "Failed to initialize map. Error: " + (error as Error).message,
         variant: "destructive"
       });
     }
@@ -187,7 +189,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold">Nairobi Orders Distribution</CardTitle>
-          <MapIcon className="h-4 w-4 text-blue-500" />
+          <MapIconLucide className="h-4 w-4 text-blue-500" />
         </div>
         <CardDescription>Geographic distribution of orders across Nairobi</CardDescription>
       </CardHeader>
