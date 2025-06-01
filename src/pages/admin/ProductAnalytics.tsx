@@ -86,8 +86,8 @@ const fetchProductAnalytics = async () => {
     });
     
     // Calculate product sales
-    const productSalesMap = new Map<string, number>();
-    const categorySalesMap = new Map<string, number>();
+    const productSalesMap: Map<string, number> = new Map();
+    const categorySalesMap: Map<string, number> = new Map();
     
     orderItemsData?.forEach(item => {
       const productId = item.product_id;

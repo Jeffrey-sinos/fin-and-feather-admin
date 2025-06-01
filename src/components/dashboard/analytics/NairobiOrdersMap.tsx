@@ -35,7 +35,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
 
   // Process order locations
   const locationData = React.useMemo(() => {
-    const locationMap = new Map<string, LocationData>();
+    const locationMap: Map<string, LocationData> = new Map();
     
     orders.forEach(order => {
       const address = order.profiles?.address;
