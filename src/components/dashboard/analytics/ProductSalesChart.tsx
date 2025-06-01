@@ -38,17 +38,17 @@ const ProductSalesChart: React.FC<ProductSalesChartProps> = ({
 }) => {
   // Format data for chart
   const chartData = products.map(product => ({
-    name: product.name.length > 12 ? `${product.name.slice(0, 12)}...` : product.name,
+    name: product.name.length > 10 ? `${product.name.slice(0, 10)}...` : product.name,
     value: product.totalSold,
     fullName: product.name,
     category: product.category,
     stock: product.stock
   }));
 
-  // Sort data so the highest/lowest value appears at the top in the chart
+  // Sort data appropriately for vertical display
   const sortedChartData = [...chartData].sort((a, b) => 
     type === 'most' ? b.value - a.value : a.value - b.value
-  );
+  ).slice(0, 5); // Limit to top 5 for better readability
 
   // Define chart colors based on type
   const getBarColor = (type: 'most' | 'least', index: number) => {
@@ -87,7 +87,7 @@ const ProductSalesChart: React.FC<ProductSalesChartProps> = ({
         <CardDescription>Based on order history</CardDescription>
       </CardHeader>
       <CardContent className="pt-2">
-        <div className="h-[160px] w-full">
+        <div className="h-[300px] w-full">
           <ChartContainer 
             config={{
               products: {
@@ -99,18 +99,17 @@ const ProductSalesChart: React.FC<ProductSalesChartProps> = ({
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={sortedChartData}
-                margin={{ top: 5, right: 10, left: 0, bottom: 30 }}
-                layout="vertical"
+                margin={{ top: 20, right: 10, left: 10, bottom: 60 }}
               >
-                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                <XAxis type="number" />
-                <YAxis 
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
                   dataKey="name" 
-                  type="category"
-                  width={100}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
                   tick={{ fontSize: 10 }}
-                  tickFormatter={(value) => value.length > 8 ? `${value.substring(0, 8)}...` : value}
                 />
+                <YAxis />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
@@ -136,7 +135,7 @@ const ProductSalesChart: React.FC<ProductSalesChartProps> = ({
                 <Bar 
                   dataKey="value" 
                   name="Units Sold"
-                  barSize={16}
+                  radius={[4, 4, 0, 0]}
                 >
                   {sortedChartData.map((entry, index) => (
                     <Cell 
@@ -146,7 +145,7 @@ const ProductSalesChart: React.FC<ProductSalesChartProps> = ({
                   ))}
                   <LabelList 
                     dataKey="value" 
-                    position="right" 
+                    position="top" 
                     style={{ fill: 'var(--foreground)', fontSize: '10px', fontWeight: 'bold' }} 
                   />
                 </Bar>

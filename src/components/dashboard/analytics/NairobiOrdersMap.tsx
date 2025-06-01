@@ -32,10 +32,11 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
   const map = useRef<any>(null);
   const [mapboxToken, setMapboxToken] = useState('');
   const [isTokenSet, setIsTokenSet] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Process order locations
   const locationData = React.useMemo(() => {
-    const locationMap: Map<string, LocationData> = new Map();
+    const locationMap = new Map<string, LocationData>();
     
     orders.forEach(order => {
       const address = order.profiles?.address;
@@ -82,18 +83,23 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
       return;
     }
 
+    setIsLoading(true);
+
     try {
       // Dynamically import mapbox-gl
-      const mapboxgl = await import('mapbox-gl');
-      await import('mapbox-gl/dist/mapbox-gl.css');
+      const mapboxModule = await import('mapbox-gl');
+      const mapboxgl = mapboxModule.default;
       
-      if (!mapContainer.current) return;
+      if (!mapContainer.current) {
+        setIsLoading(false);
+        return;
+      }
 
       // Set access token
-      mapboxgl.default.accessToken = mapboxToken;
+      mapboxgl.accessToken = mapboxToken;
       
       // Initialize map
-      map.current = new mapboxgl.default.Map({
+      map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/light-v11',
         center: [36.8219, -1.2921], // Nairobi center
@@ -103,7 +109,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
 
       // Add navigation controls
       map.current.addControl(
-        new mapboxgl.default.NavigationControl(),
+        new mapboxgl.NavigationControl(),
         'top-right'
       );
 
@@ -129,13 +135,13 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
           }
 
           // Create a marker
-          const marker = new mapboxgl.default.Marker({
+          const marker = new mapboxgl.Marker({
             color: '#0EA5E9',
             scale: Math.min(2, 0.5 + (location.count / 5))
           })
             .setLngLat(coordinates)
             .setPopup(
-              new mapboxgl.default.Popup({ offset: 25 })
+              new mapboxgl.Popup({ offset: 25 })
                 .setHTML(`
                   <div class="p-2">
                     <h3 class="font-bold">${location.address}</h3>
@@ -148,6 +154,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
         });
 
         setIsTokenSet(true);
+        setIsLoading(false);
         toast({
           title: "Success",
           description: "Map loaded successfully!",
@@ -156,6 +163,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
 
       map.current.on('error', (e: any) => {
         console.error('Mapbox error:', e);
+        setIsLoading(false);
         toast({
           title: "Error",
           description: "Failed to load map. Please check your Mapbox token.",
@@ -165,6 +173,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
 
     } catch (error) {
       console.error('Error loading map:', error);
+      setIsLoading(false);
       toast({
         title: "Error",
         description: "Failed to initialize map",
@@ -199,8 +208,8 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
                   onChange={(e) => setMapboxToken(e.target.value)}
                   className="flex-1"
                 />
-                <Button onClick={handleTokenSubmit} size="sm">
-                  Load Map
+                <Button onClick={handleTokenSubmit} size="sm" disabled={isLoading}>
+                  {isLoading ? "Loading..." : "Load Map"}
                 </Button>
               </div>
             </div>
