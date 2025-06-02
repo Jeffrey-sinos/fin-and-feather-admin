@@ -11,7 +11,7 @@ interface NairobiOrdersMapProps {
 }
 
 const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
-  const [mapboxToken, setMapboxToken] = useState('pk.eyJ1IjoiamVmMjUiLCJhIjoiY21iZHp1bTIzMHVhdTJqcW5rZGJmMmphcyJ9.PekGHROecq3wkVAerCwfXw');
+  const [mapboxToken, setMapboxToken] = useState('pk.eyJ1IjoiamVmMjUiLCJhIjoiY21iZTBram5lMXoweDJtczl1eWRkZ2dvbSJ9.ENpvIUyFAxCR1Q9nL0O9jg');
   const [isTokenSet, setIsTokenSet] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
