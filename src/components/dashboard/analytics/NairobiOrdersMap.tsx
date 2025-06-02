@@ -12,7 +12,7 @@ interface NairobiOrdersMapProps {
 
 const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
   const [mapboxToken, setMapboxToken] = useState('pk.eyJ1IjoiamVmMjUiLCJhIjoiY21iZTBram5lMXoweDJtczl1eWRkZ2dvbSJ9.ENpvIUyFAxCR1Q9nL0O9jg');
-  const [isTokenSet, setIsTokenSet] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const { mapContainer, initializeMap } = useMapboxMap();
@@ -28,20 +28,25 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
   const handleTokenSubmit = async () => {
     console.log('Starting map initialization with token:', mapboxToken);
     setIsLoading(true);
+    setShowMap(true); // Show the map container immediately
     
-    try {
-      const success = await initializeMap(mapboxToken, locationData);
-      if (success) {
-        setIsTokenSet(true);
-        console.log('Map initialization successful');
-      } else {
-        console.log('Map initialization failed');
+    // Small delay to ensure the DOM is updated
+    setTimeout(async () => {
+      try {
+        const success = await initializeMap(mapboxToken, locationData);
+        if (success) {
+          console.log('Map initialization successful');
+        } else {
+          console.log('Map initialization failed');
+          setShowMap(false); // Hide map on failure
+        }
+      } catch (error) {
+        console.error('Error during map initialization:', error);
+        setShowMap(false); // Hide map on error
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error during map initialization:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    }, 100);
   };
 
   return (
@@ -54,7 +59,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
         <CardDescription>Geographic distribution of orders across Nairobi</CardDescription>
       </CardHeader>
       <CardContent className="pt-2">
-        {!isTokenSet ? (
+        {!showMap ? (
           <MapTokenInput
             mapboxToken={mapboxToken}
             setMapboxToken={setMapboxToken}
@@ -63,9 +68,9 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
             locationData={locationData}
           />
         ) : (
-          <div className="h-[400px] w-full">
+          <div className="relative h-[400px] w-full">
             {isLoading && (
-              <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
+              <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-lg">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
                   <p className="text-sm text-gray-600">Loading map...</p>
