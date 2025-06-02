@@ -8,17 +8,23 @@ export const useMapboxMap = () => {
   const map = useRef<any>(null);
 
   const initializeMap = useCallback(async (mapboxToken: string, locationData: LocationData[]) => {
-    if (!mapboxToken.trim()) {
+    console.log('=== MAP INITIALIZATION START ===');
+    console.log('Token received:', mapboxToken);
+    console.log('Token length:', mapboxToken.length);
+    console.log('Token starts with pk.:', mapboxToken.startsWith('pk.'));
+    
+    if (!mapboxToken.trim() || !mapboxToken.startsWith('pk.')) {
+      console.error('Invalid token format');
       toast({
         title: "Error",
-        description: "Please enter a valid Mapbox token",
+        description: "Please enter a valid Mapbox public token (should start with 'pk.')",
         variant: "destructive"
       });
       return false;
     }
 
     if (!mapContainer.current) {
-      console.error('Map container not found - container ref:', mapContainer.current);
+      console.error('Map container not found');
       toast({
         title: "Error",
         description: "Map container not ready. Please try again.",
@@ -28,76 +34,72 @@ export const useMapboxMap = () => {
     }
 
     try {
-      console.log('Starting map initialization...');
-      console.log('Map container element:', mapContainer.current);
-      console.log('Mapbox token:', mapboxToken);
+      console.log('Loading mapbox-gl module...');
       
-      // Import mapbox-gl module
-      const mapboxgl = (await import('mapbox-gl')).default;
+      // Dynamic import of mapbox-gl
+      const mapboxgl = await import('mapbox-gl');
+      console.log('Mapbox-gl module loaded:', !!mapboxgl.default);
       
       // Import CSS
       await import('mapbox-gl/dist/mapbox-gl.css');
-      
-      console.log('Mapbox module loaded successfully');
+      console.log('Mapbox CSS loaded');
 
-      // Set access token
-      mapboxgl.accessToken = mapboxToken;
-      console.log('Access token set');
+      // Set access token BEFORE creating map
+      mapboxgl.default.accessToken = mapboxToken.trim();
+      console.log('Access token set to mapboxgl');
       
       // Clear any existing map
       if (map.current) {
+        console.log('Removing existing map');
         map.current.remove();
         map.current = null;
       }
       
-      // Initialize map
-      console.log('Creating new map instance...');
-      map.current = new mapboxgl.Map({
+      console.log('Creating new map with container:', mapContainer.current);
+      
+      // Create map with error handling
+      map.current = new mapboxgl.default.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v11',
+        style: 'mapbox://styles/mapbox/streets-v12', // Changed to a more reliable style
         center: [36.8219, -1.2921], // Nairobi center
         zoom: 11,
-        pitch: 0,
       });
 
-      console.log('Map instance created successfully');
+      console.log('Map instance created');
 
       // Add navigation controls
-      map.current.addControl(
-        new mapboxgl.NavigationControl(),
-        'top-right'
-      );
+      map.current.addControl(new mapboxgl.default.NavigationControl(), 'top-right');
+      console.log('Navigation controls added');
 
-      // Return a promise that resolves when the map is loaded
+      // Return promise that resolves when map loads
       return new Promise((resolve) => {
-        map.current.on('load', () => {
+        const handleLoad = () => {
           console.log('Map loaded successfully, adding markers...');
           
           // Add markers for each location
           locationData.forEach((location: LocationData, index: number) => {
             const coordinates = getCoordinatesForLocation(location.address);
-            console.log(`Adding marker ${index + 1} for:`, location.address, 'at:', coordinates);
+            console.log(`Adding marker ${index + 1}:`, location.address, coordinates);
 
-            // Create a marker
-            const marker = new mapboxgl.Marker({
+            new mapboxgl.default.Marker({
               color: '#0EA5E9',
               scale: Math.min(2, 0.5 + (location.count / 5))
             })
               .setLngLat(coordinates)
               .setPopup(
-                new mapboxgl.Popup({ offset: 25 })
+                new mapboxgl.default.Popup({ offset: 25 })
                   .setHTML(`
-                    <div class="p-2">
-                      <h3 class="font-bold">${location.address}</h3>
-                      <p class="text-sm">Orders: ${location.count}</p>
-                      <p class="text-sm">Total Value: $${location.totalValue.toFixed(2)}</p>
+                    <div style="padding: 8px;">
+                      <h3 style="font-weight: bold; margin: 0 0 4px 0;">${location.address}</h3>
+                      <p style="margin: 0; font-size: 14px;">Orders: ${location.count}</p>
+                      <p style="margin: 0; font-size: 14px;">Total Value: $${location.totalValue.toFixed(2)}</p>
                     </div>
                   `)
               )
               .addTo(map.current);
           });
 
-          console.log(`Added ${locationData.length} markers to the map`);
+          console.log(`Successfully added ${locationData.length} markers`);
           
           toast({
             title: "Success",
@@ -105,23 +107,61 @@ export const useMapboxMap = () => {
           });
           
           resolve(true);
-        });
+        };
 
-        map.current.on('error', (e: any) => {
-          console.error('Mapbox error:', e);
+        const handleError = (e: any) => {
+          console.error('Map error details:', e);
+          console.error('Error type:', e.error?.type);
+          console.error('Error message:', e.error?.message);
+          
+          let errorMessage = 'Unknown error occurred';
+          if (e.error?.message?.includes('token')) {
+            errorMessage = 'Invalid Mapbox token. Please check your token is correct.';
+          } else if (e.error?.message?.includes('network')) {
+            errorMessage = 'Network error. Please check your internet connection.';
+          } else if (e.error?.message) {
+            errorMessage = e.error.message;
+          }
+          
           toast({
             title: "Map Error",
-            description: `Failed to load map: ${e.error?.message || 'Unknown error'}`,
+            description: errorMessage,
             variant: "destructive"
           });
           resolve(false);
-        });
+        };
+
+        map.current.on('load', handleLoad);
+        map.current.on('error', handleError);
+        
+        // Add a timeout as fallback
+        setTimeout(() => {
+          if (!map.current.loaded()) {
+            console.error('Map loading timeout');
+            toast({
+              title: "Timeout Error",
+              description: "Map took too long to load. Please try again.",
+              variant: "destructive"
+            });
+            resolve(false);
+          }
+        }, 15000);
       });
+
     } catch (error) {
-      console.error('Error initializing map:', error);
+      console.error('Initialization error:', error);
+      const errorMessage = (error as Error).message;
+      
+      let userMessage = 'Failed to initialize map';
+      if (errorMessage.includes('token') || errorMessage.includes('Unauthorized')) {
+        userMessage = 'Invalid Mapbox token. Please verify your token is correct.';
+      } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        userMessage = 'Network error. Please check your connection.';
+      }
+      
       toast({
         title: "Initialization Error",
-        description: `Failed to initialize map: ${(error as Error).message}`,
+        description: userMessage,
         variant: "destructive"
       });
       return false;

@@ -26,27 +26,37 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
   }, [orders]);
 
   const handleTokenSubmit = async () => {
-    console.log('Starting map initialization with token:', mapboxToken);
-    setIsLoading(true);
-    setShowMap(true); // Show the map container immediately
+    console.log('=== BUTTON CLICKED ===');
+    console.log('Token to use:', mapboxToken);
+    console.log('Location data:', locationData);
     
-    // Small delay to ensure the DOM is updated
-    setTimeout(async () => {
-      try {
-        const success = await initializeMap(mapboxToken, locationData);
-        if (success) {
-          console.log('Map initialization successful');
-        } else {
-          console.log('Map initialization failed');
-          setShowMap(false); // Hide map on failure
-        }
-      } catch (error) {
-        console.error('Error during map initialization:', error);
-        setShowMap(false); // Hide map on error
-      } finally {
-        setIsLoading(false);
+    if (!mapboxToken.trim()) {
+      console.error('Empty token');
+      return;
+    }
+    
+    setIsLoading(true);
+    setShowMap(true);
+    
+    try {
+      // Wait a bit for DOM to update
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      console.log('Starting map initialization...');
+      const success = await initializeMap(mapboxToken, locationData);
+      
+      if (!success) {
+        console.log('Map initialization failed, hiding map');
+        setShowMap(false);
+      } else {
+        console.log('Map initialization successful');
       }
-    }, 100);
+    } catch (error) {
+      console.error('Error in handleTokenSubmit:', error);
+      setShowMap(false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -77,7 +87,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
                 </div>
               </div>
             )}
-            <div ref={mapContainer} className="h-full w-full rounded-lg" />
+            <div ref={mapContainer} className="h-full w-full rounded-lg border" style={{ minHeight: '400px' }} />
           </div>
         )}
       </CardContent>
