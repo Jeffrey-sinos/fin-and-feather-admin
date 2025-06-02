@@ -17,27 +17,29 @@ export const useMapboxMap = () => {
       return false;
     }
 
+    if (!mapContainer.current) {
+      console.error('Map container not found');
+      return false;
+    }
+
     try {
-      // Import mapbox-gl CSS first
+      console.log('Starting map initialization...');
+      console.log('Mapbox token:', mapboxToken);
+      
+      // Import mapbox-gl module
+      const mapboxgl = (await import('mapbox-gl')).default;
+      
+      // Import CSS
       await import('mapbox-gl/dist/mapbox-gl.css');
       
-      // Then import the mapbox-gl module
-      const mapboxgl = await import('mapbox-gl');
-      
-      if (!mapContainer.current) {
-        return false;
-      }
+      console.log('Mapbox module loaded successfully');
 
-      console.log('Mapbox module loaded:', mapboxgl);
-      console.log('Setting access token:', mapboxToken);
-
-      // Set access token on the default export
-      mapboxgl.default.accessToken = mapboxToken;
-      
-      console.log('Creating map...');
+      // Set access token
+      mapboxgl.accessToken = mapboxToken;
+      console.log('Access token set');
       
       // Initialize map
-      map.current = new mapboxgl.default.Map({
+      map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/light-v11',
         center: [36.8219, -1.2921], // Nairobi center
@@ -45,30 +47,31 @@ export const useMapboxMap = () => {
         pitch: 0,
       });
 
-      console.log('Map created:', map.current);
+      console.log('Map instance created');
 
       // Add navigation controls
       map.current.addControl(
-        new mapboxgl.default.NavigationControl(),
+        new mapboxgl.NavigationControl(),
         'top-right'
       );
 
+      // Set up event listeners
       map.current.on('load', () => {
-        console.log('Map loaded successfully');
+        console.log('Map loaded successfully, adding markers...');
         
         // Add markers for each location
-        locationData.forEach((location: LocationData) => {
+        locationData.forEach((location: LocationData, index: number) => {
           const coordinates = getCoordinatesForLocation(location.address);
-          console.log('Adding marker for:', location.address, 'at:', coordinates);
+          console.log(`Adding marker ${index + 1} for:`, location.address, 'at:', coordinates);
 
           // Create a marker
-          const marker = new mapboxgl.default.Marker({
+          const marker = new mapboxgl.Marker({
             color: '#0EA5E9',
             scale: Math.min(2, 0.5 + (location.count / 5))
           })
             .setLngLat(coordinates)
             .setPopup(
-              new mapboxgl.default.Popup({ offset: 25 })
+              new mapboxgl.Popup({ offset: 25 })
                 .setHTML(`
                   <div class="p-2">
                     <h3 class="font-bold">${location.address}</h3>
@@ -80,6 +83,8 @@ export const useMapboxMap = () => {
             .addTo(map.current);
         });
 
+        console.log(`Added ${locationData.length} markers to the map`);
+        
         toast({
           title: "Success",
           description: "Map loaded successfully!",
@@ -89,18 +94,26 @@ export const useMapboxMap = () => {
       map.current.on('error', (e: any) => {
         console.error('Mapbox error:', e);
         toast({
-          title: "Error",
-          description: "Failed to load map. Please check your Mapbox token.",
+          title: "Map Error",
+          description: `Failed to load map: ${e.error?.message || 'Unknown error'}`,
           variant: "destructive"
         });
       });
 
+      map.current.on('styledata', () => {
+        console.log('Map style loaded');
+      });
+
+      map.current.on('sourcedata', () => {
+        console.log('Map source data loaded');
+      });
+
       return true;
     } catch (error) {
-      console.error('Error loading map:', error);
+      console.error('Error initializing map:', error);
       toast({
-        title: "Error",
-        description: "Failed to initialize map. Error: " + (error as Error).message,
+        title: "Initialization Error",
+        description: `Failed to initialize map: ${(error as Error).message}`,
         variant: "destructive"
       });
       return false;

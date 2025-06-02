@@ -18,17 +18,30 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
   const { mapContainer, initializeMap } = useMapboxMap();
 
   // Process order locations
-  const locationData = useMemo(() => processOrderLocations(orders), [orders]);
+  const locationData = useMemo(() => {
+    console.log('Processing orders:', orders.length);
+    const processed = processOrderLocations(orders);
+    console.log('Processed locations:', processed);
+    return processed;
+  }, [orders]);
 
   const handleTokenSubmit = async () => {
+    console.log('Starting map initialization with token:', mapboxToken);
     setIsLoading(true);
     
-    const success = await initializeMap(mapboxToken, locationData);
-    if (success) {
-      setIsTokenSet(true);
+    try {
+      const success = await initializeMap(mapboxToken, locationData);
+      if (success) {
+        setIsTokenSet(true);
+        console.log('Map initialization successful');
+      } else {
+        console.log('Map initialization failed');
+      }
+    } catch (error) {
+      console.error('Error during map initialization:', error);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   return (
@@ -51,6 +64,14 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
           />
         ) : (
           <div className="h-[400px] w-full">
+            {isLoading && (
+              <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                  <p className="text-sm text-gray-600">Loading map...</p>
+                </div>
+              </div>
+            )}
             <div ref={mapContainer} className="h-full w-full rounded-lg" />
           </div>
         )}
