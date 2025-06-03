@@ -10,7 +10,8 @@ export const useMapboxMap = () => {
   const initializeMap = useCallback(async (mapboxToken: string, locationData: LocationData[]) => {
     console.log('=== MAP INITIALIZATION START ===');
     console.log('Token received:', mapboxToken);
-    console.log('Location data count:', locationData.length);
+    console.log('Token length:', mapboxToken.length);
+    console.log('Token starts with pk.:', mapboxToken.startsWith('pk.'));
     
     if (!mapboxToken.trim() || !mapboxToken.startsWith('pk.')) {
       console.error('Invalid token format');
@@ -22,42 +23,42 @@ export const useMapboxMap = () => {
       return false;
     }
 
-    // Wait for container to be available
-    let retries = 0;
-    const maxRetries = 10;
-    
-    while (!mapContainer.current && retries < maxRetries) {
-      console.log(`Waiting for container... attempt ${retries + 1}`);
-      await new Promise(resolve => setTimeout(resolve, 200));
-      retries++;
-    }
-
+    // Enhanced container checks
     if (!mapContainer.current) {
-      console.error('Map container not available after retries');
+      console.error('Map container not found');
       toast({
         title: "Error",
-        description: "Map container not ready. Please try again.",
+        description: "Map container not ready. Please try again in a moment.",
         variant: "destructive"
       });
       return false;
     }
 
-    console.log('Container found, dimensions:', mapContainer.current.offsetWidth, 'x', mapContainer.current.offsetHeight);
+    // Additional check to ensure container is actually in the DOM
+    if (!document.contains(mapContainer.current)) {
+      console.error('Map container not in DOM');
+      toast({
+        title: "Error",
+        description: "Map container not properly mounted. Please refresh and try again.",
+        variant: "destructive"
+      });
+      return false;
+    }
 
     try {
       console.log('Loading mapbox-gl module...');
       
       // Dynamic import of mapbox-gl
       const mapboxgl = await import('mapbox-gl');
-      console.log('Mapbox-gl module loaded');
+      console.log('Mapbox-gl module loaded:', !!mapboxgl.default);
       
       // Import CSS
       await import('mapbox-gl/dist/mapbox-gl.css');
       console.log('Mapbox CSS loaded');
 
-      // Set access token
+      // Set access token BEFORE creating map
       mapboxgl.default.accessToken = mapboxToken.trim();
-      console.log('Access token set');
+      console.log('Access token set to mapboxgl');
       
       // Clear any existing map
       if (map.current) {
@@ -66,12 +67,13 @@ export const useMapboxMap = () => {
         map.current = null;
       }
 
-      // Small delay to ensure container is ready
+      // Wait a small amount to ensure container is fully ready
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      console.log('Creating new map...');
+      console.log('Creating new map with container:', mapContainer.current);
+      console.log('Container dimensions:', mapContainer.current.offsetWidth, 'x', mapContainer.current.offsetHeight);
       
-      // Create map
+      // Create map with error handling
       map.current = new mapboxgl.default.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/streets-v12',
@@ -124,7 +126,9 @@ export const useMapboxMap = () => {
         };
 
         const handleError = (e: any) => {
-          console.error('Map error:', e);
+          console.error('Map error details:', e);
+          console.error('Error type:', e.error?.type);
+          console.error('Error message:', e.error?.message);
           
           let errorMessage = 'Unknown error occurred';
           if (e.error?.message?.includes('token')) {
@@ -148,7 +152,7 @@ export const useMapboxMap = () => {
         
         // Add a timeout as fallback
         setTimeout(() => {
-          if (map.current && !map.current.loaded()) {
+          if (!map.current.loaded()) {
             console.error('Map loading timeout');
             toast({
               title: "Timeout Error",
@@ -169,6 +173,8 @@ export const useMapboxMap = () => {
         userMessage = 'Invalid Mapbox token. Please verify your token is correct.';
       } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
         userMessage = 'Network error. Please check your connection.';
+      } else if (errorMessage.includes('container')) {
+        userMessage = 'Map container issue. Please try again.';
       }
       
       toast({
