@@ -15,7 +15,6 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapInitialized, setMapInitialized] = useState(false);
-  const [containerReady, setContainerReady] = useState(false);
 
   const { mapContainer, initializeMap } = useMapboxMap();
 
@@ -27,22 +26,9 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
     return processed;
   }, [orders]);
 
-  // Check if container is ready
-  useEffect(() => {
-    const checkContainer = () => {
-      if (mapContainer.current) {
-        console.log('Map container is ready');
-        setContainerReady(true);
-      } else {
-        console.log('Map container not ready, retrying...');
-        setTimeout(checkContainer, 100);
-      }
-    };
-    
-    checkContainer();
-  }, [mapContainer]);
-
   const handleLoadMap = async () => {
+    console.log('Load map button clicked');
+    
     if (!mapboxToken.trim()) {
       setMapError('Please enter a valid Mapbox token.');
       return;
@@ -52,26 +38,23 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
       setMapError('No order location data available to display.');
       return;
     }
-
-    if (!containerReady || !mapContainer.current) {
-      setMapError('Map container is not ready. Please wait a moment and try again.');
-      return;
-    }
     
     setIsLoading(true);
     setMapError(null);
     
     try {
-      console.log('Manual map initialization with container ready...');
+      console.log('Starting map initialization...');
       const success = await initializeMap(mapboxToken, locationData);
       
       if (success) {
+        console.log('Map initialized successfully');
         setMapInitialized(true);
       } else {
+        console.log('Map initialization failed');
         setMapError('Failed to load map. Please check your token and internet connection.');
       }
     } catch (error) {
-      console.error('Error in manual map initialization:', error);
+      console.error('Error in map initialization:', error);
       setMapError('Map initialization failed. Please try again.');
     } finally {
       setIsLoading(false);
