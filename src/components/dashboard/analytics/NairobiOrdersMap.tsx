@@ -1,19 +1,19 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MapIcon as MapIconLucide } from 'lucide-react';
 import { useMapboxMap } from '@/hooks/useMapboxMap';
 import { processOrderLocations, Order } from '@/utils/nairobiMapUtils';
-import MapTokenInput from './MapTokenInput';
 
 interface NairobiOrdersMapProps {
   orders: Order[];
 }
 
 const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
-  const [mapboxToken, setMapboxToken] = useState('pk.eyJ1IjoiamVmMjUiLCJhIjoiY21iZTBram5lMXoweDJtczl1eWRkZ2dvbSJ9.ENpvIUyFAxCR1Q9nL0O9jg');
-  const [showMap, setShowMap] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  // Pre-fill with a working token - users can replace this if needed
+  const [mapboxToken] = useState('pk.eyJ1IjoiamVmMjUiLCJhIjoiY21iZTBram5lMXoweDJtczl1eWRkZ2dvbSJ9.ENpvIUyFAxCR1Q9nL0O9jg');
+  const [isLoading, setIsLoading] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   const { mapContainer, initializeMap } = useMapboxMap();
 
@@ -25,39 +25,37 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
     return processed;
   }, [orders]);
 
-  const handleTokenSubmit = async () => {
-    console.log('=== BUTTON CLICKED ===');
-    console.log('Token to use:', mapboxToken);
-    console.log('Location data:', locationData);
-    
-    if (!mapboxToken.trim()) {
-      console.error('Empty token');
-      return;
-    }
-    
-    setIsLoading(true);
-    setShowMap(true);
-    
-    try {
-      // Wait a bit for DOM to update
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      console.log('Starting map initialization...');
-      const success = await initializeMap(mapboxToken, locationData);
-      
-      if (!success) {
-        console.log('Map initialization failed, hiding map');
-        setShowMap(false);
-      } else {
-        console.log('Map initialization successful');
+  // Auto-initialize map when component mounts
+  useEffect(() => {
+    const loadMap = async () => {
+      if (!mapboxToken.trim() || locationData.length === 0) {
+        setIsLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error('Error in handleTokenSubmit:', error);
-      setShowMap(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      
+      setIsLoading(true);
+      setMapError(null);
+      
+      try {
+        // Wait a bit for DOM to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        console.log('Auto-initializing map...');
+        const success = await initializeMap(mapboxToken, locationData);
+        
+        if (!success) {
+          setMapError('Failed to load map. Please check your internet connection.');
+        }
+      } catch (error) {
+        console.error('Error in auto map initialization:', error);
+        setMapError('Map initialization failed.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadMap();
+  }, [mapboxToken, locationData, initializeMap]);
 
   return (
     <Card>
@@ -69,27 +67,35 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
         <CardDescription>Geographic distribution of orders across Nairobi</CardDescription>
       </CardHeader>
       <CardContent className="pt-2">
-        {!showMap ? (
-          <MapTokenInput
-            mapboxToken={mapboxToken}
-            setMapboxToken={setMapboxToken}
-            onSubmit={handleTokenSubmit}
-            isLoading={isLoading}
-            locationData={locationData}
-          />
-        ) : (
-          <div className="relative h-[400px] w-full">
-            {isLoading && (
-              <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-lg">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                  <p className="text-sm text-gray-600">Loading map...</p>
-                </div>
+        <div className="relative h-[400px] w-full">
+          {isLoading && (
+            <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-lg">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                <p className="text-sm text-gray-600">Loading map...</p>
               </div>
-            )}
-            <div ref={mapContainer} className="h-full w-full rounded-lg border" style={{ minHeight: '400px' }} />
-          </div>
-        )}
+            </div>
+          )}
+          
+          {mapError && (
+            <div className="absolute inset-0 bg-gray-50 flex items-center justify-center rounded-lg border">
+              <div className="text-center p-4">
+                <p className="text-sm text-red-600 mb-2">{mapError}</p>
+                <p className="text-xs text-gray-500">Check console for more details</p>
+              </div>
+            </div>
+          )}
+          
+          {locationData.length === 0 && !isLoading && (
+            <div className="absolute inset-0 bg-gray-50 flex items-center justify-center rounded-lg border">
+              <div className="text-center p-4">
+                <p className="text-sm text-gray-600">No orders with Nairobi addresses found</p>
+              </div>
+            </div>
+          )}
+          
+          <div ref={mapContainer} className="h-full w-full rounded-lg border" style={{ minHeight: '400px' }} />
+        </div>
       </CardContent>
     </Card>
   );

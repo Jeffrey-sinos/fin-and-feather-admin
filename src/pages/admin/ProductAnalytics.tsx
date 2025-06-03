@@ -1,5 +1,5 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
 import { TrendingUp, TrendingDown, BarChart3, Map as MapIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +9,7 @@ import ProductSalesChart from '@/components/dashboard/analytics/ProductSalesChar
 import SalesTimelineChart from '@/components/dashboard/analytics/SalesTimelineChart';
 import CategoryPieChart from '@/components/dashboard/analytics/CategoryPieChart';
 import NairobiOrdersMap from '@/components/dashboard/analytics/NairobiOrdersMap';
+import { insertSampleNairobiOrders } from '@/utils/sampleOrdersGenerator';
 
 interface OrderWithLocation {
   id: string;
@@ -164,10 +165,32 @@ const fetchProductAnalytics = async () => {
 };
 
 const ProductAnalyticsPage = () => {
+  const queryClient = useQueryClient();
+  
   const { data: analytics, isLoading, error } = useQuery({
     queryKey: ['productAnalytics'],
     queryFn: fetchProductAnalytics,
   });
+
+  // Auto-insert sample data if no orders exist
+  useEffect(() => {
+    const checkAndInsertSampleData = async () => {
+      if (analytics && analytics.ordersWithLocations.length === 0) {
+        console.log('No orders found, inserting sample data...');
+        const success = await insertSampleNairobiOrders();
+        if (success) {
+          // Refetch data after inserting samples
+          queryClient.invalidateQueries({ queryKey: ['productAnalytics'] });
+          toast({
+            title: "Sample Data Added",
+            description: "Added 8 sample orders from different Nairobi locations for demo purposes.",
+          });
+        }
+      }
+    };
+
+    checkAndInsertSampleData();
+  }, [analytics, queryClient]);
 
   if (error) {
     console.error('Error loading product analytics:', error);
