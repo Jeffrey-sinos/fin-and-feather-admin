@@ -10,8 +10,8 @@ interface NairobiOrdersMapProps {
 }
 
 const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
-  // Use your specific Mapbox token
-  const [mapboxToken] = useState('pk.eyJ1Ijoia2lnZW4yOSIsImEiOiJjbWJnYWxvZzQwaHUwMmxzaGd2czZldjlhIn0.xuT1VouYkYI5xxW6V_wgdw');
+  // Pre-fill with a working token - users can replace this if needed
+  const [mapboxToken] = useState('pk.eyJ1IjoiamVmMjUiLCJhIjoiY21iZTBram5lMXoweDJtczl1eWRkZ2dvbSJ9.ENpvIUyFAxCR1Q9nL0O9jg');
   const [isLoading, setIsLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
 
