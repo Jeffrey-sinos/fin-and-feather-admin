@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MapIcon as MapIconLucide } from 'lucide-react';
 import { useMapboxMap } from '@/hooks/useMapboxMap';
@@ -15,6 +15,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapInitialized, setMapInitialized] = useState(false);
+  const [containerReady, setContainerReady] = useState(false);
 
   const { mapContainer, initializeMap } = useMapboxMap();
 
@@ -26,9 +27,34 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
     return processed;
   }, [orders]);
 
+  // Check if container is ready
+  useEffect(() => {
+    const checkContainer = () => {
+      if (mapContainer.current) {
+        console.log('Map container is ready');
+        setContainerReady(true);
+      } else {
+        console.log('Map container not ready, retrying...');
+        setTimeout(checkContainer, 100);
+      }
+    };
+    
+    checkContainer();
+  }, [mapContainer]);
+
   const handleLoadMap = async () => {
-    if (!mapboxToken.trim() || locationData.length === 0) {
-      setMapError('Please enter a valid Mapbox token and ensure there are orders to display.');
+    if (!mapboxToken.trim()) {
+      setMapError('Please enter a valid Mapbox token.');
+      return;
+    }
+
+    if (locationData.length === 0) {
+      setMapError('No order location data available to display.');
+      return;
+    }
+
+    if (!containerReady || !mapContainer.current) {
+      setMapError('Map container is not ready. Please wait a moment and try again.');
       return;
     }
     
@@ -36,7 +62,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
     setMapError(null);
     
     try {
-      console.log('Manual map initialization...');
+      console.log('Manual map initialization with container ready...');
       const success = await initializeMap(mapboxToken, locationData);
       
       if (success) {
@@ -46,7 +72,7 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
       }
     } catch (error) {
       console.error('Error in manual map initialization:', error);
-      setMapError('Map initialization failed.');
+      setMapError('Map initialization failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
