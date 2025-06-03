@@ -23,23 +23,11 @@ export const useMapboxMap = () => {
       return false;
     }
 
-    // Enhanced container checks
     if (!mapContainer.current) {
       console.error('Map container not found');
       toast({
         title: "Error",
-        description: "Map container not ready. Please try again in a moment.",
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    // Additional check to ensure container is actually in the DOM
-    if (!document.contains(mapContainer.current)) {
-      console.error('Map container not in DOM');
-      toast({
-        title: "Error",
-        description: "Map container not properly mounted. Please refresh and try again.",
+        description: "Map container not ready. Please try again.",
         variant: "destructive"
       });
       return false;
@@ -66,17 +54,13 @@ export const useMapboxMap = () => {
         map.current.remove();
         map.current = null;
       }
-
-      // Wait a small amount to ensure container is fully ready
-      await new Promise(resolve => setTimeout(resolve, 100));
       
       console.log('Creating new map with container:', mapContainer.current);
-      console.log('Container dimensions:', mapContainer.current.offsetWidth, 'x', mapContainer.current.offsetHeight);
       
       // Create map with error handling
       map.current = new mapboxgl.default.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
+        style: 'mapbox://styles/mapbox/streets-v12', // Changed to a more reliable style
         center: [36.8219, -1.2921], // Nairobi center
         zoom: 11,
       });
@@ -173,8 +157,6 @@ export const useMapboxMap = () => {
         userMessage = 'Invalid Mapbox token. Please verify your token is correct.';
       } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
         userMessage = 'Network error. Please check your connection.';
-      } else if (errorMessage.includes('container')) {
-        userMessage = 'Map container issue. Please try again.';
       }
       
       toast({
