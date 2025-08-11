@@ -80,7 +80,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                     {product.category}
                   </Badge>
                 </TableCell>
-                <TableCell>${product.price.toFixed(2)}</TableCell>
+                <TableCell>Ksh{product.price.toFixed(2)}</TableCell>
                 <TableCell className="font-medium">
                   {product.stock}
                 </TableCell>
