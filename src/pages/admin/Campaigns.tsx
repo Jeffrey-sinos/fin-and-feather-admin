@@ -65,6 +65,7 @@ const Campaigns = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('create');
+  const [sendingCampaigns, setSendingCampaigns] = useState<Set<string>>(new Set());
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -106,13 +107,23 @@ const Campaigns = () => {
     },
   });
 
-  // Fetch campaigns
+  // Fetch campaigns with auto-refresh for sending campaigns
   const { data: campaigns, isLoading } = useQuery<Campaign[]>({
     queryKey: ['campaigns'],
     queryFn: async () => {
+      console.log('Fetching campaigns...');
       const { data, error } = await supabase.functions.invoke('get-campaigns');
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching campaigns:', error);
+        throw error;
+      }
+      console.log('Campaigns fetched:', data.campaigns);
       return data.campaigns || [];
+    },
+    refetchInterval: (data) => {
+      // Auto-refresh every 2 seconds if there are campaigns with "sending" status
+      const hasSendingCampaigns = data?.some(campaign => campaign.status === 'sending');
+      return hasSendingCampaigns ? 2000 : false;
     },
   });
 
@@ -201,26 +212,55 @@ const Campaigns = () => {
   // Send campaign mutation
   const sendCampaignMutation = useMutation({
     mutationFn: async (campaignId: string) => {
+      console.log('Starting campaign send for:', campaignId);
+      setSendingCampaigns(prev => new Set([...prev, campaignId]));
+      
       const { data, error } = await supabase.functions.invoke('send-campaign', {
         body: { campaignId }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Campaign send error:', error);
+        throw error;
+      }
+      
+      console.log('Campaign send response:', data);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data, campaignId) => {
+      console.log('Campaign send successful:', data);
       toast({
         title: "Campaign Started",
-        description: "Campaign is now being sent",
+        description: `Campaign is now being sent. Sent: ${data.sent || 0}, Failed: ${data.failed || 0}`,
       });
+      
+      // Remove from sending state
+      setSendingCampaigns(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(campaignId);
+        return newSet;
+      });
+      
+      // Invalidate campaigns to refresh the list
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
     },
-    onError: (error: any) => {
+    onError: (error: any, campaignId) => {
+      console.error('Campaign send failed:', error);
       toast({
         title: "Send Failed",
         description: error.message || "Failed to start campaign",
         variant: "destructive",
       });
+      
+      // Remove from sending state
+      setSendingCampaigns(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(campaignId);
+        return newSet;
+      });
+      
+      // Still refresh to get updated status
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
     },
   });
 
@@ -296,10 +336,10 @@ const Campaigns = () => {
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      draft: { variant: 'secondary', icon: Clock },
-      sending: { variant: 'default', icon: Send },
-      completed: { variant: 'success', icon: CheckCircle },
-      failed: { variant: 'destructive', icon: XCircle },
+      draft: { variant: 'secondary', icon: Clock, color: 'text-gray-600' },
+      sending: { variant: 'default', icon: Send, color: 'text-blue-600' },
+      completed: { variant: 'success', icon: CheckCircle, color: 'text-green-600' },
+      failed: { variant: 'destructive', icon: XCircle, color: 'text-red-600' },
     } as any;
 
     const config = statusMap[status] || statusMap.draft;
@@ -628,50 +668,72 @@ const Campaigns = () => {
                   <div className="text-center py-8">Loading campaigns...</div>
                 ) : campaigns && campaigns.length > 0 ? (
                   <div className="space-y-4">
-                    {campaigns.map((campaign) => (
-                      <div key={campaign.id} className="border rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            {getTypeIcon(campaign.type)}
-                            <h3 className="font-medium">{campaign.name}</h3>
-                            {getStatusBadge(campaign.status)}
+                    {campaigns.map((campaign) => {
+                      const isSending = sendingCampaigns.has(campaign.id) || campaign.status === 'sending';
+                      
+                      return (
+                        <div key={campaign.id} className="border rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                              {getTypeIcon(campaign.type)}
+                              <h3 className="font-medium">{campaign.name}</h3>
+                              {getStatusBadge(campaign.status)}
+                              {isSending && (
+                                <div className="flex items-center gap-2 text-sm text-blue-600">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                  <span>Processing...</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              {campaign.status === 'draft' && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => sendCampaignMutation.mutate(campaign.id)}
+                                  disabled={sendCampaignMutation.isPending || isSending}
+                                >
+                                  <Send className="w-4 h-4 mr-1" />
+                                  {isSending ? 'Sending...' : 'Send'}
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            {campaign.status === 'draft' && (
-                              <Button
-                                size="sm"
-                                onClick={() => sendCampaignMutation.mutate(campaign.id)}
-                                disabled={sendCampaignMutation.isPending}
-                              >
-                                <Send className="w-4 h-4 mr-1" />
-                                Send
-                              </Button>
-                            )}
+                          
+                          <div className="grid grid-cols-4 gap-4 text-sm text-muted-foreground">
+                            <div>
+                              <span className="font-medium">Recipients:</span> {campaign.total_recipients}
+                            </div>
+                            <div>
+                              <span className="font-medium">Sent:</span> {campaign.sent_count}
+                            </div>
+                            <div>
+                              <span className="font-medium">Failed:</span> {campaign.failed_count}
+                            </div>
+                            <div>
+                              <span className="font-medium">Created:</span> {new Date(campaign.created_at).toLocaleDateString()}
+                            </div>
                           </div>
+                          
+                          {campaign.started_at && (
+                            <div className="mt-2 text-sm text-muted-foreground">
+                              <span className="font-medium">Started:</span> {new Date(campaign.started_at).toLocaleString()}
+                            </div>
+                          )}
+                          
+                          {campaign.completed_at && (
+                            <div className="mt-2 text-sm text-muted-foreground">
+                              <span className="font-medium">Completed:</span> {new Date(campaign.completed_at).toLocaleString()}
+                            </div>
+                          )}
+                          
+                          {campaign.error_message && (
+                            <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded">
+                              <span className="font-medium">Error:</span> {campaign.error_message}
+                            </div>
+                          )}
                         </div>
-                        
-                        <div className="grid grid-cols-4 gap-4 text-sm text-muted-foreground">
-                          <div>
-                            <span className="font-medium">Recipients:</span> {campaign.total_recipients}
-                          </div>
-                          <div>
-                            <span className="font-medium">Sent:</span> {campaign.sent_count}
-                          </div>
-                          <div>
-                            <span className="font-medium">Failed:</span> {campaign.failed_count}
-                          </div>
-                          <div>
-                            <span className="font-medium">Created:</span> {new Date(campaign.created_at).toLocaleDateString()}
-                          </div>
-                        </div>
-                        
-                        {campaign.error_message && (
-                          <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded">
-                            {campaign.error_message}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
