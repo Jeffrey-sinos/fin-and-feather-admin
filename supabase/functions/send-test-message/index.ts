@@ -100,6 +100,15 @@ const handler = async (req: Request): Promise<Response> => {
       
       if (!emailResponse.ok) {
         console.error('Brevo email API error:', emailResult);
+        
+        if (emailResult.code === 'invalid_api_key') {
+          throw new Error(`Email send failed: Invalid Brevo API key. Please check your API key configuration.`);
+        } else if (emailResult.code === 'unauthorized_domain') {
+          throw new Error(`Email send failed: The sender domain '${senderEmail}' is not verified in Brevo. Please verify your domain at https://app.brevo.com/senders/domain/list`);
+        } else if (emailResult.code === 'unauthorized_sender') {
+          throw new Error(`Email send failed: The sender email '${senderEmail}' is not verified in Brevo. Please verify your email at https://app.brevo.com/senders/list`);
+        }
+        
         throw new Error(`Email send failed: ${emailResult.message || 'Unknown error'}`);
       }
 
@@ -133,6 +142,13 @@ const handler = async (req: Request): Promise<Response> => {
       
       if (!smsResponse.ok) {
         console.error('Brevo SMS API error:', smsResult);
+        
+        if (smsResult.code === 'not_enough_credits') {
+          throw new Error(`SMS send failed: Insufficient SMS credits. Please buy SMS credits at https://app.brevo.com/billing/addon/customize/sms`);
+        } else if (smsResult.code === 'invalid_api_key') {
+          throw new Error(`SMS send failed: Invalid Brevo API key. Please check your API key configuration.`);
+        }
+        
         throw new Error(`SMS send failed: ${smsResult.message || 'Unknown error'}`);
       }
 
