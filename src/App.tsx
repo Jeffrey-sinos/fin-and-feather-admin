@@ -17,6 +17,7 @@ import Newsletter from "./pages/admin/Newsletter";
 import Blog from "./pages/admin/Blog";
 import ContactSubscribers from "./pages/admin/ContactSubscribers";
 import ProductAnalytics from "./pages/admin/ProductAnalytics";
+import Campaigns from "./pages/admin/Campaigns";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/admin/newsletter" element={<Newsletter />} />
           <Route path="/admin/blog" element={<Blog />} />
           <Route path="/admin/contacts" element={<ContactSubscribers />} />
+          <Route path="/admin/campaigns" element={<Campaigns />} />
           
           {/* Legacy routes */}
           <Route path="/index" element={<Index />} />

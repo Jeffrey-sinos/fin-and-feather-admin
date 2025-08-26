@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
@@ -47,6 +47,57 @@ export type Database = {
         }
         Relationships: []
       }
+      campaigns: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          email_html_body: string | null
+          email_subject: string | null
+          error_message: string | null
+          failed_count: number | null
+          id: string
+          name: string
+          sent_count: number | null
+          sms_text: string | null
+          started_at: string | null
+          status: string
+          total_recipients: number | null
+          type: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          email_html_body?: string | null
+          email_subject?: string | null
+          error_message?: string | null
+          failed_count?: number | null
+          id?: string
+          name: string
+          sent_count?: number | null
+          sms_text?: string | null
+          started_at?: string | null
+          status?: string
+          total_recipients?: number | null
+          type: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          email_html_body?: string | null
+          email_subject?: string | null
+          error_message?: string | null
+          failed_count?: number | null
+          id?: string
+          name?: string
+          sent_count?: number | null
+          sms_text?: string | null
+          started_at?: string | null
+          status?: string
+          total_recipients?: number | null
+          type?: string
+        }
+        Relationships: []
+      }
       contact_numbers: {
         Row: {
           created_at: string
@@ -67,6 +118,59 @@ export type Database = {
           phone_number?: string
         }
         Relationships: []
+      }
+      message_delivery_logs: {
+        Row: {
+          brevo_message_id: string | null
+          campaign_id: string
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          failed_at: string | null
+          id: string
+          recipient_address: string
+          recipient_type: string
+          sent_at: string | null
+          status: string
+          webhook_data: Json | null
+        }
+        Insert: {
+          brevo_message_id?: string | null
+          campaign_id: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          recipient_address: string
+          recipient_type: string
+          sent_at?: string | null
+          status?: string
+          webhook_data?: Json | null
+        }
+        Update: {
+          brevo_message_id?: string | null
+          campaign_id?: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          recipient_address?: string
+          recipient_type?: string
+          sent_at?: string | null
+          status?: string
+          webhook_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_delivery_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       newsletter_subscriptions: {
         Row: {
@@ -308,7 +412,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      mask_customer_phone: {
+        Args: { phone_number: string }
+        Returns: string
+      }
+      user_owns_transaction: {
+        Args: { transaction_order_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       pesapal_status: "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED"

@@ -1,0 +1,141 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface TestMessageRequest {
+  emailSubject?: string;
+  emailBody?: string;
+  smsText?: string;
+  testEmail?: string;
+  testPhone?: string;
+  sendEmail: boolean;
+  sendSms: boolean;
+}
+
+// Brevo API endpoints based on official documentation
+const BREVO_EMAIL_API = 'https://api.brevo.com/v3/smtp/email';
+const BREVO_SMS_API = 'https://api.brevo.com/v3/transactionalSMS/sms';
+
+const handler = async (req: Request): Promise<Response> => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const brevoApiKey = Deno.env.get('BREVO_API_KEY');
+    if (!brevoApiKey) {
+      throw new Error('BREVO_API_KEY is not set');
+    }
+
+    const { 
+      emailSubject, 
+      emailBody, 
+      smsText, 
+      testEmail, 
+      testPhone, 
+      sendEmail, 
+      sendSms 
+    }: TestMessageRequest = await req.json();
+
+    console.log('Sending test message:', { sendEmail, sendSms, testEmail, testPhone });
+
+    const results = [];
+
+    // Send test email if requested
+    if (sendEmail && testEmail && emailSubject && emailBody) {
+      console.log('Sending test email to:', testEmail);
+      
+      const emailPayload = {
+        sender: {
+          name: "Fish & Chick",
+          email: "noreply@fishandchick.com"
+        },
+        to: [{ email: testEmail }],
+        subject: `[TEST] ${emailSubject}`,
+        htmlContent: emailBody
+      };
+
+      const emailResponse = await fetch(BREVO_EMAIL_API, {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': brevoApiKey,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(emailPayload),
+      });
+
+      const emailResult = await emailResponse.json();
+      
+      if (!emailResponse.ok) {
+        console.error('Brevo email API error:', emailResult);
+        throw new Error(`Email send failed: ${emailResult.message || 'Unknown error'}`);
+      }
+
+      console.log('Test email sent successfully:', emailResult);
+      results.push({ type: 'email', success: true, messageId: emailResult.messageId });
+    }
+
+    // Send test SMS if requested
+    if (sendSms && testPhone && smsText) {
+      console.log('Sending test SMS to:', testPhone);
+      
+      const smsPayload = {
+        type: "transactional",
+        unicodeEnabled: true,
+        recipient: testPhone,
+        content: `[TEST] ${smsText}`,
+        sender: "FishChick"
+      };
+
+      const smsResponse = await fetch(BREVO_SMS_API, {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': brevoApiKey,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(smsPayload),
+      });
+
+      const smsResult = await smsResponse.json();
+      
+      if (!smsResponse.ok) {
+        console.error('Brevo SMS API error:', smsResult);
+        throw new Error(`SMS send failed: ${smsResult.message || 'Unknown error'}`);
+      }
+
+      console.log('Test SMS sent successfully:', smsResult);
+      results.push({ type: 'sms', success: true, reference: smsResult.reference });
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        results,
+        message: 'Test message(s) sent successfully' 
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+
+  } catch (error: any) {
+    console.error('Error in send-test-message function:', error);
+    return new Response(
+      JSON.stringify({ 
+        error: error.message || 'Failed to send test message' 
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  }
+};
+
+serve(handler);

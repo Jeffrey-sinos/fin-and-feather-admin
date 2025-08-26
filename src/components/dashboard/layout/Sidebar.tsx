@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Package, ShoppingCart, Users, Home, Box, Mail, FileText, MessageSquare, BarChart3 } from 'lucide-react';
+import { Package, ShoppingCart, Users, Home, Box, Mail, FileText, MessageSquare, BarChart3, Megaphone } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -45,6 +45,11 @@ const navItems: NavItem[] = [
     title: 'Customers',
     href: '/admin/customers',
     icon: Users,
+  },
+  {
+    title: 'Campaigns',
+    href: '/admin/campaigns',
+    icon: Megaphone,
   },
   {
     title: 'Newsletter',
