@@ -120,11 +120,7 @@ const Campaigns = () => {
       console.log('Campaigns fetched:', data.campaigns);
       return data.campaigns || [];
     },
-    refetchInterval: (data) => {
-      // Auto-refresh every 2 seconds if there are campaigns with "sending" status
-      const hasSendingCampaigns = data?.some(campaign => campaign.status === 'sending');
-      return hasSendingCampaigns ? 2000 : false;
-    },
+    refetchInterval: 2000, // Auto-refresh every 2 seconds to check for status changes
   });
 
   // Create campaign mutation
