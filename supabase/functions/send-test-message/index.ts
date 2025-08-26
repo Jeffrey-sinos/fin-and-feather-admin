@@ -26,6 +26,9 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const brevoApiKey = Deno.env.get('BREVO_API_KEY');
+    const senderEmail = Deno.env.get('BREVO_SENDER_EMAIL') || 'campaigns@lakevictoriaaquaculture.com';
+    const senderName = Deno.env.get('BREVO_SENDER_NAME') || 'Lake Victoria Aquaculture';
+    
     if (!brevoApiKey) {
       throw new Error('BREVO_API_KEY is not set');
     }
@@ -42,6 +45,31 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Sending test message:', { sendEmail, sendSms, testEmail, testPhone });
 
+    // Validation: Check if content is provided for selected channels
+    if (sendEmail && (!emailSubject || !emailBody)) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Email subject and body are required when sending test emails' 
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    if (sendSms && !smsText) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'SMS text is required when sending test SMS' 
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     const results = [];
 
     // Send test email if requested
@@ -50,8 +78,8 @@ const handler = async (req: Request): Promise<Response> => {
       
       const emailPayload = {
         sender: {
-          name: "Fish & Chick",
-          email: "noreply@fishandchick.com"
+          name: senderName,
+          email: senderEmail
         },
         to: [{ email: testEmail }],
         subject: `[TEST] ${emailSubject}`,
@@ -88,7 +116,7 @@ const handler = async (req: Request): Promise<Response> => {
         unicodeEnabled: true,
         recipient: testPhone,
         content: `[TEST] ${smsText}`,
-        sender: "FishChick"
+        sender: "LakeVic"
       };
 
       const smsResponse = await fetch(BREVO_SMS_API, {
@@ -112,11 +140,24 @@ const handler = async (req: Request): Promise<Response> => {
       results.push({ type: 'sms', success: true, reference: smsResult.reference });
     }
 
+    // If no messages were sent, return an error
+    if (results.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'No test messages were sent. Please check your content and recipient information.' 
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
         results,
-        message: 'Test message(s) sent successfully' 
+        message: `Test message(s) sent successfully (${results.length} sent)` 
       }),
       {
         status: 200,

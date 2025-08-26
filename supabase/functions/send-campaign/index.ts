@@ -117,10 +117,13 @@ const handler = async (req: Request): Promise<Response> => {
         for (const chunk of emailChunks) {
           try {
             await retryRequest(async () => {
+              const senderEmail = Deno.env.get('BREVO_SENDER_EMAIL') || 'campaigns@lakevictoriaaquaculture.com';
+              const senderName = Deno.env.get('BREVO_SENDER_NAME') || 'Lake Victoria Aquaculture';
+              
               const emailPayload = {
                 sender: {
-                  name: "Fish & Chick",
-                  email: "noreply@fishandchick.com"
+                  name: senderName,
+                  email: senderEmail
                 },
                 to: chunk.map(sub => ({ email: sub.email })),
                 subject: campaign.email_subject,
@@ -211,7 +214,7 @@ const handler = async (req: Request): Promise<Response> => {
                 unicodeEnabled: true,
                 recipient: subscriber.phone_number,
                 content: campaign.sms_text,
-                sender: "FishChick"
+                sender: "LakeVic"
               };
 
               const response = await fetch(BREVO_SMS_API, {

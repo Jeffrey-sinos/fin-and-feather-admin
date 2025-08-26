@@ -170,10 +170,23 @@ const Campaigns = () => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const results = data.results || [];
+      const emailResult = results.find((r: any) => r.type === 'email');
+      const smsResult = results.find((r: any) => r.type === 'sms');
+      
+      let description = 'Test message sent successfully';
+      if (emailResult && smsResult) {
+        description = `Email sent (ID: ${emailResult.messageId}) and SMS sent (Ref: ${smsResult.reference})`;
+      } else if (emailResult) {
+        description = `Test email sent successfully (ID: ${emailResult.messageId})`;
+      } else if (smsResult) {
+        description = `Test SMS sent successfully (Ref: ${smsResult.reference})`;
+      }
+      
       toast({
         title: "Test Sent",
-        description: "Test message sent successfully",
+        description,
       });
     },
     onError: (error: any) => {
@@ -226,6 +239,24 @@ const Campaigns = () => {
       return;
     }
 
+    if (values.sendEmail && (!values.emailSubject || !values.emailBody)) {
+      toast({
+        title: "Error",
+        description: "Email subject and body are required for email tests",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (values.sendSms && !values.smsText) {
+      toast({
+        title: "Error",
+        description: "SMS text is required for SMS tests",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (values.sendEmail && !values.testEmail) {
       toast({
         title: "Error",
@@ -245,6 +276,22 @@ const Campaigns = () => {
     }
 
     sendTestMutation.mutate(values);
+  };
+
+  // Check if test button should be disabled
+  const isTestDisabled = () => {
+    const values = form.getValues();
+    if (!values.sendEmail && !values.sendSms) return true;
+    
+    if (values.sendEmail) {
+      if (!values.emailSubject || !values.emailBody || !values.testEmail) return true;
+    }
+    
+    if (values.sendSms) {
+      if (!values.smsText || !values.testPhone) return true;
+    }
+    
+    return false;
   };
 
   const getStatusBadge = (status: string) => {
@@ -503,7 +550,7 @@ const Campaigns = () => {
                             type="button"
                             variant="outline"
                             onClick={onSendTest}
-                            disabled={sendTestMutation.isPending}
+                            disabled={sendTestMutation.isPending || isTestDisabled()}
                             className="w-full"
                           >
                             <TestTube className="w-4 h-4 mr-2" />
@@ -525,6 +572,13 @@ const Campaigns = () => {
                             <div>
                               <h4 className="font-medium text-sm">Email Subject:</h4>
                               <p className="text-sm bg-muted p-2 rounded">{watchedValues.emailSubject}</p>
+                            </div>
+                          )}
+
+                          {watchedValues.sendEmail && (
+                            <div>
+                              <h4 className="font-medium text-sm">From:</h4>
+                              <p className="text-sm bg-muted p-2 rounded">Lake Victoria Aquaculture &lt;campaigns@lakevictoriaaquaculture.com&gt;</p>
                             </div>
                           )}
                           
