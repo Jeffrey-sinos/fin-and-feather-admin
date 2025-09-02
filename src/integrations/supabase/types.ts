@@ -63,6 +63,7 @@ export type Database = {
           status: string
           total_recipients: number | null
           type: string
+          updated_at: string
         }
         Insert: {
           completed_at?: string | null
@@ -79,6 +80,7 @@ export type Database = {
           status?: string
           total_recipients?: number | null
           type: string
+          updated_at?: string
         }
         Update: {
           completed_at?: string | null
@@ -95,6 +97,7 @@ export type Database = {
           status?: string
           total_recipients?: number | null
           type?: string
+          updated_at?: string
         }
         Relationships: []
       }

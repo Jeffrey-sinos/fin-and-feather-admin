@@ -12,6 +12,7 @@ interface CreateCampaignRequest {
   emailSubject?: string;
   emailBody?: string;
   smsText?: string;
+  campaignId?: string; // For updates
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -30,8 +31,63 @@ const handler = async (req: Request): Promise<Response> => {
       supabaseServiceKey
     );
 
-    const { name, type, emailSubject, emailBody, smsText }: CreateCampaignRequest = await req.json();
+    const { name, type, emailSubject, emailBody, smsText, campaignId }: CreateCampaignRequest = await req.json();
 
+    // Handle update campaign
+    if (campaignId) {
+      console.log('Updating campaign:', campaignId);
+
+      // Count recipients based on campaign type for updates too
+      let totalRecipients = 0;
+      
+      if (type === 'email' || type === 'both') {
+        const { count: emailCount } = await supabase
+          .from('newsletter_subscriptions')
+          .select('*', { count: 'exact', head: true });
+        totalRecipients += emailCount || 0;
+      }
+      
+      if (type === 'sms' || type === 'both') {
+        const { count: smsCount } = await supabase
+          .from('contact_numbers')
+          .select('*', { count: 'exact', head: true });
+        totalRecipients += smsCount || 0;
+      }
+
+      const { data: campaign, error: updateError } = await supabase
+        .from('campaigns')
+        .update({
+          name,
+          type,
+          email_subject: emailSubject,
+          email_html_body: emailBody,
+          sms_text: smsText,
+          total_recipients: totalRecipients,
+        })
+        .eq('id', campaignId)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Error updating campaign:', updateError);
+        throw new Error(`Failed to update campaign: ${updateError.message}`);
+      }
+
+      console.log('Campaign updated successfully:', campaign.id);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          campaign: campaign 
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Handle create campaign
     console.log('Creating campaign:', { name, type });
 
     // Count recipients based on campaign type

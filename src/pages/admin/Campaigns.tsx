@@ -11,11 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, MessageSquare, Send, Eye, TestTube, Users, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Mail, MessageSquare, Send, Eye, TestTube, Users, Clock, CheckCircle, XCircle, Edit, Trash2 } from 'lucide-react';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Campaign name is required'),
@@ -66,6 +67,8 @@ const Campaigns = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('create');
   const [sendingCampaigns, setSendingCampaigns] = useState<Set<string>>(new Set());
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -205,7 +208,70 @@ const Campaigns = () => {
     },
   });
 
-  // Send campaign mutation
+  // Update campaign mutation
+  const updateCampaignMutation = useMutation({
+    mutationFn: async ({ campaignId, values }: { campaignId: string, values: FormValues }) => {
+      const campaignType = values.sendEmail && values.sendSms ? 'both' : 
+                          values.sendEmail ? 'email' : 'sms';
+
+      const { data, error } = await supabase.functions.invoke('create-campaign', {
+        body: {
+          campaignId,
+          name: values.name,
+          type: campaignType,
+          emailSubject: values.emailSubject,
+          emailBody: values.emailBody,
+          smsText: values.smsText,
+        }
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Campaign updated successfully",
+      });
+      setEditingCampaign(null);
+      form.reset();
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update campaign",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete campaign mutation
+  const deleteCampaignMutation = useMutation({
+    mutationFn: async (campaignId: string) => {
+      const { data, error } = await supabase.functions.invoke('delete-campaign', {
+        body: { campaignId }
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Campaign deleted successfully",
+      });
+      setCampaignToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete campaign",
+        variant: "destructive",
+      });
+    },
+  });
   const sendCampaignMutation = useMutation({
     mutationFn: async (campaignId: string) => {
       console.log('Starting campaign send for:', campaignId);
@@ -261,7 +327,34 @@ const Campaigns = () => {
   });
 
   const onSubmit = (values: FormValues) => {
-    createCampaignMutation.mutate(values);
+    if (editingCampaign) {
+      updateCampaignMutation.mutate({ campaignId: editingCampaign.id, values });
+    } else {
+      createCampaignMutation.mutate(values);
+    }
+  };
+
+  const startEditingCampaign = (campaign: Campaign) => {
+    setEditingCampaign(campaign);
+    
+    // Populate form with campaign data
+    form.reset({
+      name: campaign.name,
+      emailSubject: campaign.email_subject || '',
+      emailBody: campaign.email_html_body || '',
+      smsText: campaign.sms_text || '',
+      sendEmail: campaign.type === 'email' || campaign.type === 'both',
+      sendSms: campaign.type === 'sms' || campaign.type === 'both',
+      testEmail: '',
+      testPhone: '',
+    });
+    
+    setActiveTab('create');
+  };
+
+  const cancelEditing = () => {
+    setEditingCampaign(null);
+    form.reset();
   };
 
   const onSendTest = () => {
@@ -392,10 +485,20 @@ const Campaigns = () => {
           <TabsContent value="create" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Create New Campaign</CardTitle>
+                <CardTitle>{editingCampaign ? 'Edit Campaign' : 'Create New Campaign'}</CardTitle>
                 <CardDescription>
-                  Design your email and SMS campaign with preview and testing options
+                  {editingCampaign 
+                    ? `Editing campaign: ${editingCampaign.name}` 
+                    : 'Design your email and SMS campaign with preview and testing options'
+                  }
                 </CardDescription>
+                {editingCampaign && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={cancelEditing}>
+                      Cancel Edit
+                    </Button>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 <Form {...form}>
@@ -641,10 +744,13 @@ const Campaigns = () => {
                     <div className="flex gap-4">
                       <Button
                         type="submit"
-                        disabled={createCampaignMutation.isPending}
+                        disabled={editingCampaign ? updateCampaignMutation.isPending : createCampaignMutation.isPending}
                         className="flex-1"
                       >
-                        {createCampaignMutation.isPending ? 'Creating...' : 'Create Campaign'}
+                        {editingCampaign 
+                          ? (updateCampaignMutation.isPending ? 'Updating...' : 'Update Campaign')
+                          : (createCampaignMutation.isPending ? 'Creating...' : 'Create Campaign')
+                        }
                       </Button>
                     </div>
                   </form>
@@ -681,18 +787,53 @@ const Campaigns = () => {
                                 </div>
                               )}
                             </div>
-                            <div className="flex gap-2">
-                              {campaign.status === 'draft' && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => sendCampaignMutation.mutate(campaign.id)}
-                                  disabled={sendCampaignMutation.isPending || isSending}
-                                >
-                                  <Send className="w-4 h-4 mr-1" />
-                                  {isSending ? 'Sending...' : 'Send'}
-                                </Button>
-                              )}
-                            </div>
+                             <div className="flex gap-2">
+                               {campaign.status === 'draft' && (
+                                 <>
+                                   <Button
+                                     size="sm"
+                                     variant="outline"
+                                     onClick={() => startEditingCampaign(campaign)}
+                                   >
+                                     <Edit className="w-4 h-4 mr-1" />
+                                     Edit
+                                   </Button>
+                                   <AlertDialog>
+                                     <AlertDialogTrigger asChild>
+                                       <Button size="sm" variant="destructive">
+                                         <Trash2 className="w-4 h-4 mr-1" />
+                                         Delete
+                                       </Button>
+                                     </AlertDialogTrigger>
+                                     <AlertDialogContent>
+                                       <AlertDialogHeader>
+                                         <AlertDialogTitle>Delete Campaign</AlertDialogTitle>
+                                         <AlertDialogDescription>
+                                           Are you sure you want to delete "{campaign.name}"? This action cannot be undone.
+                                         </AlertDialogDescription>
+                                       </AlertDialogHeader>
+                                       <AlertDialogFooter>
+                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                         <AlertDialogAction 
+                                           onClick={() => deleteCampaignMutation.mutate(campaign.id)}
+                                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                         >
+                                           Delete
+                                         </AlertDialogAction>
+                                       </AlertDialogFooter>
+                                     </AlertDialogContent>
+                                   </AlertDialog>
+                                   <Button
+                                     size="sm"
+                                     onClick={() => sendCampaignMutation.mutate(campaign.id)}
+                                     disabled={sendCampaignMutation.isPending || isSending}
+                                   >
+                                     <Send className="w-4 h-4 mr-1" />
+                                     {isSending ? 'Sending...' : 'Send'}
+                                   </Button>
+                                 </>
+                               )}
+                             </div>
                           </div>
                           
                           <div className="grid grid-cols-4 gap-4 text-sm text-muted-foreground">
