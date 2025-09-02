@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, MessageSquare, Send, Eye, TestTube, Users, Clock, CheckCircle, XCircle, Edit, Trash2 } from 'lucide-react';
+import { Mail, MessageSquare, Send, Eye, Users, Clock, CheckCircle, XCircle, Edit, Trash2 } from 'lucide-react';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Campaign name is required'),
@@ -25,8 +25,6 @@ const formSchema = z.object({
   smsText: z.string().max(1600, 'SMS text must be 1600 characters or less').optional(),
   sendEmail: z.boolean().default(false),
   sendSms: z.boolean().default(false),
-  testEmail: z.string().email().optional().or(z.literal('')),
-  testPhone: z.string().optional(),
 }).refine(data => data.sendEmail || data.sendSms, {
   message: "At least one option (Email or SMS) must be selected",
   path: ["sendEmail"],
@@ -79,8 +77,6 @@ const Campaigns = () => {
       smsText: '',
       sendEmail: false,
       sendSms: false,
-      testEmail: '',
-      testPhone: '',
     },
   });
 
@@ -162,51 +158,6 @@ const Campaigns = () => {
     },
   });
 
-  // Send test mutation
-  const sendTestMutation = useMutation({
-    mutationFn: async (values: FormValues) => {
-      const { data, error } = await supabase.functions.invoke('send-test-message', {
-        body: {
-          emailSubject: values.emailSubject,
-          emailBody: values.emailBody,
-          smsText: values.smsText,
-          testEmail: values.testEmail,
-          testPhone: values.testPhone,
-          sendEmail: values.sendEmail,
-          sendSms: values.sendSms,
-        }
-      });
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      const results = data.results || [];
-      const emailResult = results.find((r: any) => r.type === 'email');
-      const smsResult = results.find((r: any) => r.type === 'sms');
-      
-      let description = 'Test message sent successfully';
-      if (emailResult && smsResult) {
-        description = `Email sent (ID: ${emailResult.messageId}) and SMS sent (Ref: ${smsResult.reference})`;
-      } else if (emailResult) {
-        description = `Test email sent successfully (ID: ${emailResult.messageId})`;
-      } else if (smsResult) {
-        description = `Test SMS sent successfully (Ref: ${smsResult.reference})`;
-      }
-      
-      toast({
-        title: "Test Sent",
-        description,
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Test Failed",
-        description: error.message || "Failed to send test message",
-        variant: "destructive",
-      });
-    },
-  });
 
   // Update campaign mutation
   const updateCampaignMutation = useMutation({
@@ -345,8 +296,6 @@ const Campaigns = () => {
       smsText: campaign.sms_text || '',
       sendEmail: campaign.type === 'email' || campaign.type === 'both',
       sendSms: campaign.type === 'sms' || campaign.type === 'both',
-      testEmail: '',
-      testPhone: '',
     });
     
     setActiveTab('create');
@@ -357,71 +306,6 @@ const Campaigns = () => {
     form.reset();
   };
 
-  const onSendTest = () => {
-    const values = form.getValues();
-    if (!values.sendEmail && !values.sendSms) {
-      toast({
-        title: "Error",
-        description: "Please select at least one option (Email or SMS)",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (values.sendEmail && (!values.emailSubject || !values.emailBody)) {
-      toast({
-        title: "Error",
-        description: "Email subject and body are required for email tests",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (values.sendSms && !values.smsText) {
-      toast({
-        title: "Error",
-        description: "SMS text is required for SMS tests",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (values.sendEmail && !values.testEmail) {
-      toast({
-        title: "Error",
-        description: "Test email address is required",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (values.sendSms && !values.testPhone) {
-      toast({
-        title: "Error",
-        description: "Test phone number is required",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    sendTestMutation.mutate(values);
-  };
-
-  // Check if test button should be disabled
-  const isTestDisabled = () => {
-    const values = form.getValues();
-    if (!values.sendEmail && !values.sendSms) return true;
-    
-    if (values.sendEmail) {
-      if (!values.emailSubject || !values.emailBody || !values.testEmail) return true;
-    }
-    
-    if (values.sendSms) {
-      if (!values.smsText || !values.testPhone) return true;
-    }
-    
-    return false;
-  };
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
@@ -634,71 +518,8 @@ const Campaigns = () => {
                       </Card>
                     </div>
 
-                    <Separator />
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <TestTube className="w-4 h-4" />
-                            Test Send
-                          </CardTitle>
-                          <CardDescription>Send a test message before launching</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          {watchedValues.sendEmail && (
-                            <FormField
-                              control={form.control}
-                              name="testEmail"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Test Email Address</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="email"
-                                      placeholder="test@example.com"
-                                      {...field}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          )}
-                          
-                          {watchedValues.sendSms && (
-                            <FormField
-                              control={form.control}
-                              name="testPhone"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Test Phone Number</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      placeholder="+254700123456"
-                                      {...field}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          )}
-
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={onSendTest}
-                            disabled={sendTestMutation.isPending || isTestDisabled()}
-                            className="w-full"
-                          >
-                            <TestTube className="w-4 h-4 mr-2" />
-                            {sendTestMutation.isPending ? 'Sending...' : 'Send Test'}
-                          </Button>
-                        </CardContent>
-                      </Card>
-
-                      <Card>
+                    <div className="flex justify-center">
+                      <Card className="w-full max-w-md">
                         <CardHeader>
                           <CardTitle className="flex items-center gap-2">
                             <Eye className="w-4 h-4" />
