@@ -4,7 +4,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 // Admin routes
@@ -23,33 +26,36 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/admin" replace />} />
-          
-          {/* Admin Routes */}
-          <Route path="/admin" element={<Dashboard />} />
-          <Route path="/admin/products" element={<Products />} />
-          <Route path="/admin/customers" element={<Customers />} />
-          <Route path="/admin/orders" element={<Orders />} />
-          <Route path="/admin/inventory" element={<Inventory />} />
-          <Route path="/admin/analytics" element={<ProductAnalytics />} />
-          <Route path="/admin/newsletter" element={<Newsletter />} />
-          <Route path="/admin/blog" element={<Blog />} />
-          <Route path="/admin/contacts" element={<ContactSubscribers />} />
-          <Route path="/admin/campaigns" element={<Campaigns />} />
-          
-          {/* Legacy routes */}
-          <Route path="/index" element={<Index />} />
-          
-          {/* 404 Route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            
+            {/* Protected Admin Routes */}
+            <Route path="/admin" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/admin/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
+            <Route path="/admin/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
+            <Route path="/admin/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+            <Route path="/admin/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+            <Route path="/admin/analytics" element={<ProtectedRoute><ProductAnalytics /></ProtectedRoute>} />
+            <Route path="/admin/newsletter" element={<ProtectedRoute><Newsletter /></ProtectedRoute>} />
+            <Route path="/admin/blog" element={<ProtectedRoute><Blog /></ProtectedRoute>} />
+            <Route path="/admin/contacts" element={<ProtectedRoute><ContactSubscribers /></ProtectedRoute>} />
+            <Route path="/admin/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
+            
+            {/* Legacy routes */}
+            <Route path="/index" element={<Index />} />
+            
+            {/* 404 Route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
