@@ -137,65 +137,46 @@ const fetchOrder = async (id: string): Promise<Order | null> => {
 // Update order status in Supabase
 const updateOrderStatusInSupabase = async (id: string, status: Order['status']): Promise<boolean> => {
   try {
-    const { error } = await supabase
-      .from('orders')
-      .update({ status })
-      .eq('id', id);
-    
-    if (error) throw error;
-    
-    // If order is completed, deduct the stock
+    // If order is being completed, use the edge function for stock management
     if (status === 'completed') {
-      // First, get the order with its items to know which products to update
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .select(`id, items:order_items(product_id, quantity)`)
-        .eq('id', id)
-        .single();
-        
-      if (orderError) throw orderError;
-      
-      // Process each order item to deduct stock
-      if (order && order.items) {
-        for (const item of order.items) {
-          // Get current product stock
-          const { data: product, error: productError } = await supabase
-            .from('products')
-            .select('stock')
-            .eq('id', item.product_id)
-            .single();
-            
-          if (productError) {
-            console.error(`Error fetching product ${item.product_id}:`, productError);
-            continue;
-          }
-          
-          // Calculate new stock level (prevent negative stock)
-          const newStock = Math.max(0, product.stock - item.quantity);
-          
-          // Update product stock
-          const { error: updateError } = await supabase
-            .from('products')
-            .update({ stock: newStock })
-            .eq('id', item.product_id);
-            
-          if (updateError) {
-            console.error(`Error updating stock for product ${item.product_id}:`, updateError);
-          }
-        }
+      const { data, error } = await supabase.functions.invoke('complete-order', {
+        body: { orderId: id }
+      });
+
+      if (error) {
+        console.error('Error calling complete-order function:', error);
+        throw new Error(error.message || 'Failed to complete order');
       }
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to complete order');
+      }
+
+      toast({
+        title: "Success",
+        description: `Order completed successfully with ${data.stockUpdates?.length || 0} stock updates`,
+      });
+      return true;
+    } else {
+      // For other status changes, use simple update
+      const { error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: `Order status updated to ${status}`,
+      });
+      return true;
     }
-    
-    toast({
-      title: "Success",
-      description: `Order status updated to ${status}${status === 'completed' ? ' and inventory updated' : ''}`,
-    });
-    return true;
   } catch (error) {
     console.error(`Error updating order ${id} status:`, error);
     toast({
       title: "Error",
-      description: "Failed to update order status",
+      description: error instanceof Error ? error.message : "Failed to update order status",
       variant: "destructive"
     });
     throw error;

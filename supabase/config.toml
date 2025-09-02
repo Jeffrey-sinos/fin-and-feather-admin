@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.brevo-webhook]
 verify_jwt = false
+
+[functions.complete-order]
+verify_jwt = true
