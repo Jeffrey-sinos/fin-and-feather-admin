@@ -1,7 +1,9 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
+import { Menu, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TopBarProps {
   sidebarOpen: boolean;
@@ -9,6 +11,12 @@ interface TopBarProps {
 }
 
 const TopBar: React.FC<TopBarProps> = ({ sidebarOpen, setSidebarOpen }) => {
+  const { user } = useAuth();
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
       <div className="px-4 sm:px-6 lg:px-8">
@@ -34,8 +42,19 @@ const TopBar: React.FC<TopBarProps> = ({ sidebarOpen, setSidebarOpen }) => {
             </Button>
           </div>
           
-          <div className="flex items-center">
-            <span className="text-sm font-medium">Admin</span>
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-muted-foreground">
+              {user?.email}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              className="flex items-center space-x-2"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sign Out</span>
+            </Button>
           </div>
         </div>
       </div>
