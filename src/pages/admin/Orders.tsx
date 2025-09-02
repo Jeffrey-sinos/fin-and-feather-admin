@@ -139,9 +139,11 @@ const updateOrderStatusInSupabase = async (id: string, status: Order['status']):
   try {
     // If order is being completed, use the edge function for stock management
     if (status === 'completed') {
+      console.log('[Orders] Invoking complete-order for', id);
       const { data, error } = await supabase.functions.invoke('complete-order', {
         body: { orderId: id }
       });
+      console.log('[Orders] complete-order response', { data, error });
 
       if (error) {
         console.error('Error calling complete-order function:', error);
@@ -149,6 +151,7 @@ const updateOrderStatusInSupabase = async (id: string, status: Order['status']):
       }
 
       if (!data?.success) {
+        console.error('complete-order returned error:', data);
         throw new Error(data?.error || 'Failed to complete order');
       }
 
