@@ -349,14 +349,7 @@ export async function createOrder(
     
     if (itemsError) throw itemsError;
     
-    // Update product stock
-    await Promise.all(items.map(item => {
-      const product = products.find(p => p.id === item.productId)!;
-      return supabase
-        .from('products')
-        .update({ stock: product.stock - item.quantity })
-        .eq('id', item.productId);
-    }));
+    // Note: Stock will be reduced when payment is completed and order status changes to 'completed'
     
     toast.success('Order created successfully');
     
