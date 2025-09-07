@@ -1,0 +1,248 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+interface PesapalCallback {
+  OrderTrackingId: string;
+  OrderMerchantReference: string;
+  OrderNotificationType: string;
+  OrderCreatedDate: string;
+}
+
+interface CompleteOrderRequest {
+  orderId: string;
+}
+
+Deno.serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    // Create service role client for bypassing RLS
+    const supabaseService = createClient(supabaseUrl, supabaseServiceKey);
+
+    console.log('Pesapal callback function called');
+
+    // Parse request body
+    const callbackData: PesapalCallback = await req.json();
+    console.log('Received Pesapal callback:', JSON.stringify(callbackData, null, 2));
+
+    const { OrderTrackingId, OrderMerchantReference, OrderNotificationType } = callbackData;
+
+    if (!OrderTrackingId || !OrderMerchantReference) {
+      console.error('Missing required callback data');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing required callback data' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Log the callback to our database for auditing
+    const { error: logError } = await supabaseService
+      .from('pesapal_callbacks')
+      .insert({
+        pesapal_tracking_id: OrderTrackingId,
+        callback_type: OrderNotificationType || 'unknown',
+        raw_payload: callbackData,
+        processed: false
+      });
+
+    if (logError) {
+      console.error('Error logging callback:', logError);
+    }
+
+    // Find the transaction by tracking ID
+    const { data: transaction, error: transactionError } = await supabaseService
+      .from('pesapal_transactions')
+      .select('*')
+      .eq('pesapal_tracking_id', OrderTrackingId)
+      .single();
+
+    if (transactionError || !transaction) {
+      console.error('Transaction not found for tracking ID:', OrderTrackingId, transactionError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Transaction not found' }),
+        { 
+          status: 404, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    console.log('Found transaction:', transaction.id, 'for order:', transaction.order_id);
+
+    // Check if this is a successful payment notification
+    if (OrderNotificationType === 'COMPLETED' || OrderNotificationType === 'SUCCESS') {
+      console.log('Processing successful payment for order:', transaction.order_id);
+
+      // Update transaction status to COMPLETED
+      const { error: updateTransactionError } = await supabaseService
+        .from('pesapal_transactions')
+        .update({ status: 'COMPLETED' })
+        .eq('id', transaction.id);
+
+      if (updateTransactionError) {
+        console.error('Error updating transaction status:', updateTransactionError);
+      }
+
+      // Get the order to check if it's already completed
+      const { data: order, error: orderError } = await supabaseService
+        .from('orders')
+        .select('status')
+        .eq('id', transaction.order_id)
+        .single();
+
+      if (orderError || !order) {
+        console.error('Order not found:', transaction.order_id, orderError);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Order not found' }),
+          { 
+            status: 404, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      // Only complete the order if it's not already completed (idempotent)
+      if (order.status !== 'completed') {
+        console.log('Completing order and reducing stock for order:', transaction.order_id);
+
+        // Call the complete-order function to handle stock reduction and order completion
+        const { data: completeOrderData, error: completeOrderError } = await supabaseService.functions.invoke('complete-order', {
+          body: { orderId: transaction.order_id }
+        });
+
+        if (completeOrderError) {
+          console.error('Error calling complete-order function:', completeOrderError);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Failed to complete order: ' + completeOrderError.message 
+            }),
+            { 
+              status: 500, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          );
+        }
+
+        if (!completeOrderData?.success) {
+          console.error('complete-order function returned error:', completeOrderData);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Failed to complete order: ' + (completeOrderData?.error || 'Unknown error')
+            }),
+            { 
+              status: 500, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          );
+        }
+
+        console.log('Successfully completed order:', transaction.order_id, 'with stock updates');
+      } else {
+        console.log('Order', transaction.order_id, 'is already completed, skipping stock reduction');
+      }
+
+      // Mark callback as processed
+      await supabaseService
+        .from('pesapal_callbacks')
+        .update({ processed: true })
+        .eq('pesapal_tracking_id', OrderTrackingId);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Payment processed successfully',
+          orderId: transaction.order_id
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+
+    } else if (OrderNotificationType === 'FAILED' || OrderNotificationType === 'CANCELLED') {
+      console.log('Processing failed/cancelled payment for order:', transaction.order_id);
+
+      // Update transaction status
+      const newStatus = OrderNotificationType === 'FAILED' ? 'FAILED' : 'CANCELLED';
+      await supabaseService
+        .from('pesapal_transactions')
+        .update({ status: newStatus })
+        .eq('id', transaction.id);
+
+      // Update order status to cancelled
+      await supabaseService
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', transaction.order_id);
+
+      // Mark callback as processed
+      await supabaseService
+        .from('pesapal_callbacks')
+        .update({ processed: true })
+        .eq('pesapal_tracking_id', OrderTrackingId);
+
+      console.log('Marked order as cancelled:', transaction.order_id);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Payment failure processed',
+          orderId: transaction.order_id
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+
+    } else {
+      console.log('Received unhandled notification type:', OrderNotificationType);
+      
+      // Mark callback as processed even if we don't handle it
+      await supabaseService
+        .from('pesapal_callbacks')
+        .update({ processed: true })
+        .eq('pesapal_tracking_id', OrderTrackingId);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Callback received but not processed',
+          notificationType: OrderNotificationType
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+  } catch (error) {
+    console.error('Unexpected error in pesapal-callback function:', error);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: 'Internal server error' 
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  }
+});

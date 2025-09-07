@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.complete-order]
 verify_jwt = true
+
+[functions.pesapal-callback]
+verify_jwt = false
