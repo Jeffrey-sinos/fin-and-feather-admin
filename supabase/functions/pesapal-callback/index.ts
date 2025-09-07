@@ -30,10 +30,64 @@ Deno.serve(async (req) => {
     const supabaseService = createClient(supabaseUrl, supabaseServiceKey);
 
     console.log('Pesapal callback function called');
+    console.log('Request method:', req.method);
+    console.log('Content-Type:', req.headers.get('content-type'));
 
-    // Parse request body
-    const callbackData: PesapalCallback = await req.json();
-    console.log('Received Pesapal callback:', JSON.stringify(callbackData, null, 2));
+    // Parse request data - handle multiple formats (JSON, form-urlencoded, query params)
+    let callbackData: PesapalCallback;
+    
+    try {
+      const url = new URL(req.url);
+      const contentType = req.headers.get('content-type') || '';
+      
+      if (req.method === 'GET') {
+        // Handle GET request with query parameters
+        console.log('Processing GET request with query params');
+        callbackData = {
+          OrderTrackingId: url.searchParams.get('OrderTrackingId') || '',
+          OrderMerchantReference: url.searchParams.get('OrderMerchantReference') || '',
+          OrderNotificationType: url.searchParams.get('OrderNotificationType') || '',
+          OrderCreatedDate: url.searchParams.get('OrderCreatedDate') || ''
+        };
+      } else if (contentType.includes('application/x-www-form-urlencoded')) {
+        // Handle form-urlencoded POST
+        console.log('Processing form-urlencoded data');
+        const formData = await req.formData();
+        callbackData = {
+          OrderTrackingId: formData.get('OrderTrackingId')?.toString() || '',
+          OrderMerchantReference: formData.get('OrderMerchantReference')?.toString() || '',
+          OrderNotificationType: formData.get('OrderNotificationType')?.toString() || '',
+          OrderCreatedDate: formData.get('OrderCreatedDate')?.toString() || ''
+        };
+      } else {
+        // Try JSON parsing as fallback
+        console.log('Attempting JSON parsing');
+        const text = await req.text();
+        if (text.trim()) {
+          callbackData = JSON.parse(text);
+        } else {
+          // Empty body, try query params
+          callbackData = {
+            OrderTrackingId: url.searchParams.get('OrderTrackingId') || '',
+            OrderMerchantReference: url.searchParams.get('OrderMerchantReference') || '',
+            OrderNotificationType: url.searchParams.get('OrderNotificationType') || '',
+            OrderCreatedDate: url.searchParams.get('OrderCreatedDate') || ''
+          };
+        }
+      }
+    } catch (parseError) {
+      console.error('Error parsing request data:', parseError);
+      const url = new URL(req.url);
+      // Fallback to query parameters
+      callbackData = {
+        OrderTrackingId: url.searchParams.get('OrderTrackingId') || '',
+        OrderMerchantReference: url.searchParams.get('OrderMerchantReference') || '',
+        OrderNotificationType: url.searchParams.get('OrderNotificationType') || '',
+        OrderCreatedDate: url.searchParams.get('OrderCreatedDate') || ''
+      };
+    }
+
+    console.log('Parsed Pesapal callback data:', JSON.stringify(callbackData, null, 2));
 
     const { OrderTrackingId, OrderMerchantReference, OrderNotificationType } = callbackData;
 
@@ -62,12 +116,34 @@ Deno.serve(async (req) => {
       console.error('Error logging callback:', logError);
     }
 
-    // Find the transaction by tracking ID
-    const { data: transaction, error: transactionError } = await supabaseService
-      .from('pesapal_transactions')
-      .select('*')
-      .eq('pesapal_tracking_id', OrderTrackingId)
-      .single();
+    // Find the transaction by tracking ID or merchant reference
+    let transaction = null;
+    let transactionError = null;
+
+    // First try by tracking ID
+    if (OrderTrackingId) {
+      const result = await supabaseService
+        .from('pesapal_transactions')
+        .select('*')
+        .eq('pesapal_tracking_id', OrderTrackingId)
+        .maybeSingle();
+      
+      transaction = result.data;
+      transactionError = result.error;
+    }
+
+    // If not found and we have merchant reference, try that
+    if (!transaction && OrderMerchantReference) {
+      console.log('Transaction not found by tracking ID, trying merchant reference:', OrderMerchantReference);
+      const result = await supabaseService
+        .from('pesapal_transactions')
+        .select('*')
+        .eq('merchant_reference', OrderMerchantReference)
+        .maybeSingle();
+      
+      transaction = result.data;
+      transactionError = result.error;
+    }
 
     if (transactionError || !transaction) {
       console.error('Transaction not found for tracking ID:', OrderTrackingId, transactionError);

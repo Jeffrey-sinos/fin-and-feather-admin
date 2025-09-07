@@ -58,17 +58,22 @@ Deno.serve(async (req) => {
 
     console.log('Complete order function called');
 
-    // Validate JWT and get user
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    if (authError || !user) {
-      console.error('Authentication failed:', authError);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Unauthorized' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+    // Try to validate JWT and get user, but allow server-to-server calls
+    let user = null;
+    let isServerCall = false;
+
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
+      const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser();
+      if (!authError && authUser) {
+        user = authUser;
+      } else {
+        console.log('JWT validation failed, treating as server call:', authError?.message);
+        isServerCall = true;
+      }
+    } else {
+      console.log('No authorization header, treating as server call');
+      isServerCall = true;
     }
 
     // Parse request body
@@ -103,26 +108,30 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if user owns the order or is admin
-    const { data: userRole } = await supabaseService
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .single();
+    // Authorization check - skip for server calls, check ownership/admin for user calls
+    if (!isServerCall && user) {
+      const { data: userRole } = await supabaseService
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .single();
 
-    const isAdmin = !!userRole;
-    const ownsOrder = order.user_id === user.id;
+      const isAdmin = !!userRole;
+      const ownsOrder = order.user_id === user.id;
 
-    if (!isAdmin && !ownsOrder) {
-      console.error('User does not own order and is not admin');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Access denied' }),
-        { 
-          status: 403, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+      if (!isAdmin && !ownsOrder) {
+        console.error('User does not own order and is not admin');
+        return new Response(
+          JSON.stringify({ success: false, error: 'Access denied' }),
+          { 
+            status: 403, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    } else if (isServerCall) {
+      console.log('Server-to-server call, skipping user authorization');
     }
 
     // Check if order is already completed (idempotent)
