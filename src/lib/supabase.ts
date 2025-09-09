@@ -24,16 +24,18 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       .from('customers')
       .select('*', { count: 'exact', head: true });
 
-    // Get total number of products
+    // Get total number of products (excluding deleted)
     const { count: totalProducts } = await supabase
       .from('products')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null);
       
-    // Get low stock products count
+    // Get low stock products count (excluding deleted)
     const { count: lowStockProducts } = await supabase
       .from('products')
       .select('*', { count: 'exact', head: true })
-      .lt('stock', 10);
+      .lt('stock', 10)
+      .is('deleted_at', null);
       
     // Get total revenue
     const { data: revenueData } = await supabase
@@ -96,6 +98,7 @@ export async function getProducts(): Promise<Product[]> {
     const { data, error } = await supabase
       .from('products')
       .select('*')
+      .is('deleted_at', null)
       .order('name');
     
     if (error) throw error;
@@ -169,7 +172,7 @@ export async function deleteProduct(id: string): Promise<boolean> {
   try {
     const { error } = await supabase
       .from('products')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', id);
     
     if (error) throw error;
@@ -298,7 +301,8 @@ export async function createOrder(
     const { data: productsData, error: productsError } = await supabase
       .from('products')
       .select('id, price, stock')
-      .in('id', items.map(item => item.productId));
+      .in('id', items.map(item => item.productId))
+      .is('deleted_at', null);
     
     if (productsError) throw productsError;
     

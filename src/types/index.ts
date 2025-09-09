@@ -18,6 +18,7 @@ export interface Product {
   stock: number;
   image_url?: string | null;
   created_at: string;
+  deleted_at?: string | null;
 }
 
 export interface OrderItem {

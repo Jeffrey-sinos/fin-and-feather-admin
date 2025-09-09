@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          ip_address: unknown | null
+          record_id: string | null
+          table_name: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          record_id?: string | null
+          table_name: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          record_id?: string | null
+          table_name?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       blog_posts: {
         Row: {
           content: string
@@ -270,6 +303,60 @@ export type Database = {
           },
         ]
       }
+      page_content: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          meta_description: string | null
+          published: boolean
+          slug: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meta_description?: string | null
+          published?: boolean
+          slug: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meta_description?: string | null
+          published?: boolean
+          slug?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_content_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "page_content_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pesapal_callbacks: {
         Row: {
           callback_type: string
@@ -303,6 +390,7 @@ export type Database = {
           created_at: string
           currency: string
           customer_phone: string | null
+          customer_phone_display: string | null
           id: string
           iframe_url: string | null
           merchant_reference: string
@@ -316,6 +404,7 @@ export type Database = {
           created_at?: string
           currency?: string
           customer_phone?: string | null
+          customer_phone_display?: string | null
           id?: string
           iframe_url?: string | null
           merchant_reference: string
@@ -329,6 +418,7 @@ export type Database = {
           created_at?: string
           currency?: string
           customer_phone?: string | null
+          customer_phone_display?: string | null
           id?: string
           iframe_url?: string | null
           merchant_reference?: string
@@ -351,6 +441,7 @@ export type Database = {
         Row: {
           category: string | null
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
           image_url: string | null
@@ -361,6 +452,7 @@ export type Database = {
         Insert: {
           category?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
@@ -371,6 +463,7 @@ export type Database = {
         Update: {
           category?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
@@ -410,6 +503,57 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_movements: {
+        Row: {
+          created_at: string
+          id: string
+          movement_type: string
+          new_stock: number
+          order_id: string | null
+          previous_stock: number
+          product_id: string
+          quantity: number
+          reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          movement_type: string
+          new_stock: number
+          order_id?: string | null
+          previous_stock: number
+          product_id: string
+          quantity: number
+          reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          movement_type?: string
+          new_stock?: number
+          order_id?: string | null
+          previous_stock?: number
+          product_id?: string
+          quantity?: number
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -443,12 +587,36 @@ export type Database = {
         }
         Returns: boolean
       }
+      log_audit_access: {
+        Args: {
+          action_param: string
+          record_id_param?: string
+          table_name_param: string
+        }
+        Returns: undefined
+      }
       mask_customer_phone: {
         Args: { phone_number: string }
         Returns: string
       }
+      mask_customer_phone_enhanced: {
+        Args: { phone_number: string }
+        Returns: string
+      }
+      reduce_product_stock: {
+        Args: { order_id_param: string }
+        Returns: boolean
+      }
       user_owns_transaction: {
         Args: { transaction_order_id: string }
+        Returns: boolean
+      }
+      user_owns_transaction_with_audit: {
+        Args: { transaction_order_id: string }
+        Returns: boolean
+      }
+      validate_phone_number: {
+        Args: { phone: string }
         Returns: boolean
       }
     }

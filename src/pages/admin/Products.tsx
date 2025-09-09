@@ -33,6 +33,7 @@ const fetchProducts = async (): Promise<Product[]> => {
   const { data, error } = await supabase
     .from('products')
     .select('*')
+    .is('deleted_at', null)
     .order('name');
   
   if (error) {
@@ -88,11 +89,11 @@ const updateProductInSupabase = async ({ id, data }: { id: string; data: Partial
   return updatedData as Product;
 };
 
-// Delete a product
+// Delete a product (soft delete)
 const deleteProductFromSupabase = async (id: string): Promise<void> => {
   const { error } = await supabase
     .from('products')
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq('id', id);
   
   if (error) {
