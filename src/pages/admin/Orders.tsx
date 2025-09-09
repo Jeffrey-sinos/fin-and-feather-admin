@@ -376,7 +376,7 @@ const Orders = () => {
                             <PaginationLink
                               onClick={() => handlePageChange(page)}
                               isActive={isCurrentPage}
-                              className="cursor-pointer"
+                              className={`cursor-pointer ${isCurrentPage ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}`}
                             >
                               {page}
                             </PaginationLink>
