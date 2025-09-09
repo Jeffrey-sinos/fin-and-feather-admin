@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MapIcon as MapIconLucide } from 'lucide-react';
 import { useMapboxMap } from '@/hooks/useMapboxMap';
@@ -10,8 +10,24 @@ interface NairobiOrdersMapProps {
   orders: Order[];
 }
 
+const getMapboxToken = (): string => {
+  // First check environment variable
+  const envToken = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
+  if (envToken && envToken.trim()) {
+    return envToken.trim();
+  }
+  
+  // Then check localStorage
+  const storedToken = localStorage.getItem('mapbox_token');
+  if (storedToken && storedToken.trim()) {
+    return storedToken.trim();
+  }
+  
+  return '';
+};
+
 const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
-  const [mapboxToken, setMapboxToken] = useState('pk.eyJ1IjoiamVmMjUiLCJhIjoiY21iZTBram5lMXoweDJtczl1eWRkZ2dvbSJ9.ENpvIUyFAxCR1Q9nL0O9jg');
+  const [mapboxToken, setMapboxToken] = useState(getMapboxToken());
   const [showMap, setShowMap] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -25,6 +41,13 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
     return processed;
   }, [orders]);
 
+  // Auto-initialize map if token is available
+  useEffect(() => {
+    if (mapboxToken && mapboxToken.trim() && !showMap && locationData.length > 0) {
+      handleTokenSubmit();
+    }
+  }, [mapboxToken, locationData]);
+
   const handleTokenSubmit = async () => {
     console.log('=== BUTTON CLICKED ===');
     console.log('Token to use:', mapboxToken);
@@ -34,6 +57,9 @@ const NairobiOrdersMap: React.FC<NairobiOrdersMapProps> = ({ orders = [] }) => {
       console.error('Empty token');
       return;
     }
+    
+    // Store token in localStorage for future use
+    localStorage.setItem('mapbox_token', mapboxToken.trim());
     
     setIsLoading(true);
     setShowMap(true);

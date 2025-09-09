@@ -23,10 +23,11 @@ const MapTokenInput: React.FC<MapTokenInputProps> = ({
   return (
     <div className="space-y-4">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 mb-2">Setup Required</h4>
+        <h4 className="font-medium text-blue-900 mb-2">Mapbox Token Required</h4>
         <p className="text-sm text-blue-700 mb-3">
           To view the Nairobi orders map, please enter your Mapbox public token. 
-          You can get one for free at <a href="https://mapbox.com" target="_blank" rel="noopener noreferrer" className="underline">mapbox.com</a>
+          You can get one for free at <a href="https://mapbox.com" target="_blank" rel="noopener noreferrer" className="underline">mapbox.com</a>.
+          This will be saved for future visits.
         </p>
         <div className="flex gap-2">
           <Input
