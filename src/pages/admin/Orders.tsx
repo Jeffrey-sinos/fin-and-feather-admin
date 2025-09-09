@@ -20,19 +20,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 type StatusFilter = "all" | "pending" | "processing" | "completed" | "cancelled";
 
-// Fetch all orders from Supabase
-const fetchOrders = async (): Promise<Order[]> => {
+// Fetch orders with pagination from Supabase
+const fetchOrders = async (page: number = 1, pageSize: number = 10, statusFilter: StatusFilter = "all", searchQuery: string = ""): Promise<{ orders: Order[], totalCount: number }> => {
   try {
-    // Get orders
-    const { data: ordersData, error: ordersError } = await supabase
+    const offset = (page - 1) * pageSize;
+    
+    // Build the query
+    let query = supabase
       .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1);
+    
+    // Apply status filter
+    if (statusFilter !== "all") {
+      query = query.eq('status', statusFilter);
+    }
+    
+    // Get orders with count
+    const { data: ordersData, error: ordersError, count } = await query;
     
     if (ordersError) throw ordersError;
     
@@ -71,7 +91,19 @@ const fetchOrders = async (): Promise<Order[]> => {
       return processOrder(processedOrder);
     }));
     
-    return orders;
+    // Filter orders by search query on the client side for more complex search
+    const filteredOrders = orders.filter(order => {
+      if (!searchQuery) return true;
+      
+      const matchesSearch = 
+        order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (order.customer?.name && order.customer.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (order.customer?.email && order.customer.email.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      return matchesSearch;
+    });
+    
+    return { orders: filteredOrders, totalCount: count || 0 };
   } catch (error) {
     console.error('Error fetching orders:', error);
     toast({
@@ -192,12 +224,18 @@ const Orders = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Queries
-  const { data: orders = [], isLoading, error } = useQuery({
-    queryKey: ['orders'],
-    queryFn: fetchOrders,
+  const { data: ordersData, isLoading, error } = useQuery({
+    queryKey: ['orders', currentPage, pageSize, statusFilter, filterValue],
+    queryFn: () => fetchOrders(currentPage, pageSize, statusFilter, filterValue),
   });
+
+  const orders = ordersData?.orders || [];
+  const totalCount = ordersData?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   if (error) {
     console.error('Error loading orders data:', error);
@@ -222,17 +260,10 @@ const Orders = () => {
     },
   });
 
-  // Filter orders based on search input and status
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
-      order.id.toLowerCase().includes(filterValue.toLowerCase()) ||
-      (order.customer?.name && order.customer.name.toLowerCase().includes(filterValue.toLowerCase())) ||
-      (order.customer?.email && order.customer.email.toLowerCase().includes(filterValue.toLowerCase()));
-    
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, filterValue]);
 
   // Handlers
   const handleViewDetails = (order: Order) => {
@@ -242,6 +273,15 @@ const Orders = () => {
 
   const handleOrderStatusChange = (id: string, status: Order['status']) => {
     updateStatusMutation.mutate({ id, status });
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (newPageSize: string) => {
+    setPageSize(parseInt(newPageSize));
+    setCurrentPage(1);
   };
 
   return (
@@ -274,6 +314,18 @@ const Orders = () => {
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
+
+          <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5 per page</SelectItem>
+              <SelectItem value="10">10 per page</SelectItem>
+              <SelectItem value="20">20 per page</SelectItem>
+              <SelectItem value="50">50 per page</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {isLoading ? (
@@ -286,10 +338,75 @@ const Orders = () => {
             </div>
           </div>
         ) : (
-          <OrdersTable
-            orders={filteredOrders}
-            onViewDetails={handleViewDetails}
-          />
+          <>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {orders.length} of {totalCount} orders
+              </p>
+            </div>
+            
+            <OrdersTable
+              orders={orders}
+              onViewDetails={handleViewDetails}
+            />
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    
+                    {[...Array(totalPages)].map((_, index) => {
+                      const page = index + 1;
+                      const isCurrentPage = page === currentPage;
+                      
+                      // Show first page, last page, current page, and pages around current
+                      if (
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => handlePageChange(page)}
+                              isActive={isCurrentPage}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      }
+                      
+                      // Show ellipsis
+                      if (page === currentPage - 2 || page === currentPage + 2) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        );
+                      }
+                      
+                      return null;
+                    })}
+                    
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </>
         )}
       </div>
 
