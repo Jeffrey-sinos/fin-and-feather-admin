@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Product } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProductFormProps {
   product?: Product;
@@ -30,12 +31,12 @@ interface ProductFormProps {
   isSubmitting: boolean;
 }
 
-// Define the form schema
+// Define the form schema with flexible category
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   price: z.coerce.number().positive('Price must be a positive number'),
-  category: z.enum(['fish', 'chicken']),
+  category: z.string().min(1, 'Category is required'),
   stock: z.coerce.number().int().nonnegative('Stock must be a non-negative integer'),
   image_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
 });
@@ -47,6 +48,33 @@ const ProductForm: React.FC<ProductFormProps> = ({
   onSubmit,
   isSubmitting,
 }) => {
+  const [categories, setCategories] = useState<string[]>([]);
+  const [customCategory, setCustomCategory] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
+
+  // Fetch existing categories from the database
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('category')
+          .is('deleted_at', null)
+          .not('category', 'is', null);
+
+        if (error) throw error;
+
+        // Extract unique categories
+        const uniqueCategories = [...new Set(data.map(item => item.category).filter(Boolean))];
+        setCategories(uniqueCategories.sort());
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   // Initialize the form
   const form = useForm<ProductFormData>({
     resolver: zodResolver(formSchema),
@@ -54,11 +82,27 @@ const ProductForm: React.FC<ProductFormProps> = ({
       name: product?.name || '',
       description: product?.description || '',
       price: product?.price || 0,
-      category: (product?.category as 'fish' | 'chicken') || 'fish',
+      category: product?.category || '',
       stock: product?.stock || 0,
       image_url: product?.image_url || '',
     },
   });
+
+  const handleCategoryChange = (value: string) => {
+    if (value === 'custom') {
+      setShowCustomInput(true);
+      form.setValue('category', '');
+    } else {
+      setShowCustomInput(false);
+      setCustomCategory('');
+      form.setValue('category', value);
+    }
+  };
+
+  const handleCustomCategoryChange = (value: string) => {
+    setCustomCategory(value);
+    form.setValue('category', value);
+  };
 
   return (
     <Form {...form}>
@@ -122,21 +166,48 @@ const ProductForm: React.FC<ProductFormProps> = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Category</FormLabel>
-                <Select
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="fish">Fish</SelectItem>
-                    <SelectItem value="chicken">Chicken</SelectItem>
-                  </SelectContent>
-                </Select>
+                {!showCustomInput ? (
+                  <Select
+                    value={field.value}
+                    onValueChange={handleCategoryChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category.charAt(0).toUpperCase() + category.slice(1)}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="custom">+ Add new category</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input
+                        placeholder="Enter new category"
+                        value={customCategory}
+                        onChange={(e) => handleCustomCategoryChange(e.target.value)}
+                      />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowCustomInput(false);
+                        setCustomCategory('');
+                        form.setValue('category', '');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                )}
                 <FormMessage />
               </FormItem>
             )}
