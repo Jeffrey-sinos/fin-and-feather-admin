@@ -155,6 +155,45 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_zones: {
+        Row: {
+          base_fee: number
+          created_at: string
+          estimated_time_mins: number
+          id: string
+          is_active: boolean
+          max_distance_km: number
+          min_distance_km: number
+          name: string
+          per_km_rate: number
+          updated_at: string
+        }
+        Insert: {
+          base_fee?: number
+          created_at?: string
+          estimated_time_mins?: number
+          id?: string
+          is_active?: boolean
+          max_distance_km: number
+          min_distance_km?: number
+          name: string
+          per_km_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          base_fee?: number
+          created_at?: string
+          estimated_time_mins?: number
+          id?: string
+          is_active?: boolean
+          max_distance_km?: number
+          min_distance_km?: number
+          name?: string
+          per_km_rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       message_delivery_logs: {
         Row: {
           brevo_message_id: string | null
@@ -271,6 +310,13 @@ export type Database = {
       orders: {
         Row: {
           created_at: string
+          delivery_address: string | null
+          delivery_distance_km: number | null
+          delivery_fee: number | null
+          delivery_latitude: number | null
+          delivery_longitude: number | null
+          delivery_zone_id: string | null
+          estimated_delivery_time: number | null
           id: string
           pesapal_transaction_id: string | null
           status: string
@@ -279,6 +325,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          delivery_address?: string | null
+          delivery_distance_km?: number | null
+          delivery_fee?: number | null
+          delivery_latitude?: number | null
+          delivery_longitude?: number | null
+          delivery_zone_id?: string | null
+          estimated_delivery_time?: number | null
           id?: string
           pesapal_transaction_id?: string | null
           status?: string
@@ -287,6 +340,13 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          delivery_address?: string | null
+          delivery_distance_km?: number | null
+          delivery_fee?: number | null
+          delivery_latitude?: number | null
+          delivery_longitude?: number | null
+          delivery_zone_id?: string | null
+          estimated_delivery_time?: number | null
           id?: string
           pesapal_transaction_id?: string | null
           status?: string
@@ -294,6 +354,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_delivery_zone_id_fkey"
+            columns: ["delivery_zone_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_zones"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_pesapal_transaction_id_fkey"
             columns: ["pesapal_transaction_id"]
@@ -580,6 +647,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_delivery_fee: {
+        Args: { distance_km: number }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -87,7 +87,7 @@ const LowStockAlert: React.FC<LowStockAlertProps> = ({ products }) => {
                     </Badge>
                   )}
                 </TableCell>
-                <TableCell>${product.price.toFixed(2)}</TableCell>
+                <TableCell>Ksh {product.price.toFixed(2)}</TableCell>
                 <TableCell>
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-sm">

@@ -63,7 +63,7 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
                     {product.category}
                   </Badge>
                 </TableCell>
-                <TableCell>${product.price.toFixed(2)}</TableCell>
+                <TableCell>Ksh {product.price.toFixed(2)}</TableCell>
                 <TableCell>
                   <span className={
                     product.stock <= 5

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
+import { ImageUpload } from '@/components/ui/image-upload';
 import {
   Form,
   FormControl,
@@ -145,7 +146,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             name="price"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Price ($)</FormLabel>
+                <FormLabel>Price (Ksh)</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -242,16 +243,15 @@ const ProductForm: React.FC<ProductFormProps> = ({
             name="image_url"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Image URL</FormLabel>
+                <FormLabel>Product Image</FormLabel>
                 <FormControl>
-                  <Input
-                    placeholder="https://example.com/image.jpg"
-                    {...field}
+                  <ImageUpload
+                    bucket="product-images"
+                    value={field.value || undefined}
+                    onChange={(url) => field.onChange(url)}
+                    disabled={isSubmitting}
                   />
                 </FormControl>
-                <FormDescription>
-                  Optional product image URL
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

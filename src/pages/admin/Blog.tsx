@@ -8,6 +8,7 @@ import { toast } from '@/components/ui/use-toast';
 import { FileText, Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -385,13 +386,13 @@ const Blog = () => {
                 name="featured_image"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Featured Image URL (optional)</FormLabel>
+                    <FormLabel>Featured Image</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="https://example.com/image.jpg"
-                        {...field}
-                        value={field.value || ''}
-                        onChange={(e) => field.onChange(e.target.value || null)}
+                      <ImageUpload
+                        bucket="blog-images"
+                        value={field.value || undefined}
+                        onChange={(url) => field.onChange(url)}
+                        disabled={form.formState.isSubmitting}
                       />
                     </FormControl>
                     <FormMessage />

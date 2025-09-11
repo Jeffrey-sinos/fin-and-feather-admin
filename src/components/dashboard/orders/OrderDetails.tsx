@@ -156,7 +156,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onStatusChange }) =>
               </div>
               <div className="grid grid-cols-[100px_1fr] gap-1">
                 <div className="text-muted-foreground">Total:</div>
-                <div className="font-bold text-xl">${Number(order.total_amount).toFixed(2)}</div>
+                <div className="font-bold text-xl">Ksh {Number(order.total_amount).toFixed(2)}</div>
               </div>
             </div>
           </CardContent>
@@ -206,10 +206,10 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onStatusChange }) =>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>${Number(item.unit_price).toFixed(2)}</TableCell>
+                  <TableCell>Ksh {Number(item.unit_price).toFixed(2)}</TableCell>
                   <TableCell>{item.quantity}</TableCell>
                   <TableCell className="text-right">
-                    ${(Number(item.unit_price) * item.quantity).toFixed(2)}
+                    Ksh {(Number(item.unit_price) * item.quantity).toFixed(2)}
                   </TableCell>
                 </TableRow>
               ))}
