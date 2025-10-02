@@ -25,6 +25,27 @@ const Index = () => {
               Administrator credentials required
             </p>
           </div>
+          
+          <div className="pt-6 border-t space-y-2">
+            <p className="text-sm font-medium">Information</p>
+            <div className="flex flex-wrap gap-2 justify-center text-xs">
+              <Link to="/faq" className="text-primary hover:underline">
+                FAQs
+              </Link>
+              <span className="text-muted-foreground">•</span>
+              <Link to="/terms" className="text-primary hover:underline">
+                Terms & Conditions
+              </Link>
+              <span className="text-muted-foreground">•</span>
+              <Link to="/shipping" className="text-primary hover:underline">
+                Shipping Policy
+              </Link>
+              <span className="text-muted-foreground">•</span>
+              <Link to="/returns" className="text-primary hover:underline">
+                Returns & Refunds
+              </Link>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

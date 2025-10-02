@@ -93,3 +93,113 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Prose styles for dynamic page content */
+.prose {
+  @apply text-foreground;
+}
+
+.prose h1 {
+  @apply text-4xl font-bold mb-4 text-foreground;
+}
+
+.prose h2 {
+  @apply text-3xl font-bold mt-8 mb-4 text-foreground;
+}
+
+.prose h3 {
+  @apply text-2xl font-semibold mt-6 mb-3 text-foreground;
+}
+
+.prose h4 {
+  @apply text-xl font-semibold mt-4 mb-2 text-foreground;
+}
+
+.prose h5 {
+  @apply text-lg font-semibold mt-3 mb-2 text-foreground;
+}
+
+.prose h6 {
+  @apply text-base font-semibold mt-2 mb-1 text-foreground;
+}
+
+.prose p {
+  @apply mb-4 text-foreground;
+}
+
+.prose ul {
+  @apply list-disc list-inside mb-4 space-y-2;
+}
+
+.prose ol {
+  @apply list-decimal list-inside mb-4 space-y-2;
+}
+
+.prose li {
+  @apply text-foreground;
+}
+
+.prose a {
+  @apply text-primary hover:underline;
+}
+
+.prose strong {
+  @apply font-bold;
+}
+
+.prose em {
+  @apply italic;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-primary pl-4 italic my-4;
+}
+
+.prose code {
+  @apply bg-muted px-1 py-0.5 rounded text-sm font-mono;
+}
+
+.prose pre {
+  @apply bg-muted p-4 rounded mb-4 overflow-x-auto;
+}
+
+.prose table {
+  @apply w-full border-collapse mb-4;
+}
+
+.prose th {
+  @apply border border-border bg-muted px-4 py-2 text-left font-semibold;
+}
+
+.prose td {
+  @apply border border-border px-4 py-2;
+}
+
+/* Quill editor styles */
+.ql-toolbar {
+  @apply border-border bg-muted/50 rounded-t-md;
+}
+
+.ql-container {
+  @apply border-border rounded-b-md min-h-[300px];
+}
+
+.ql-editor {
+  @apply min-h-[300px] text-foreground;
+}
+
+.dark .ql-editor.ql-blank::before {
+  @apply text-muted-foreground;
+}
+
+.ql-snow .ql-stroke {
+  @apply stroke-foreground;
+}
+
+.ql-snow .ql-fill {
+  @apply fill-foreground;
+}
+
+.ql-snow .ql-picker-label {
+  @apply text-foreground;
+}

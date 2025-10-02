@@ -21,6 +21,8 @@ import Blog from "./pages/admin/Blog";
 import ContactSubscribers from "./pages/admin/ContactSubscribers";
 import ProductAnalytics from "./pages/admin/ProductAnalytics";
 import Campaigns from "./pages/admin/Campaigns";
+import Pages from "./pages/admin/Pages";
+import DynamicPage from "./pages/DynamicPage";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +48,10 @@ const App = () => (
             <Route path="/admin/blog" element={<ProtectedRoute><Blog /></ProtectedRoute>} />
             <Route path="/admin/contacts" element={<ProtectedRoute><ContactSubscribers /></ProtectedRoute>} />
             <Route path="/admin/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
+            <Route path="/admin/pages" element={<ProtectedRoute><Pages /></ProtectedRoute>} />
+            
+            {/* Dynamic Public Pages */}
+            <Route path="/page/:slug" element={<DynamicPage />} />
             
             {/* Legacy routes */}
             <Route path="/index" element={<Index />} />
