@@ -55,7 +55,7 @@ const MapTokenInput: React.FC<MapTokenInputProps> = ({
                   <span className="text-sm font-medium">{location.address}</span>
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {location.count} orders (${location.totalValue.toFixed(2)})
+                  {location.count} orders (Ksh {location.totalValue.toFixed(2)})
                 </div>
               </div>
             ))}

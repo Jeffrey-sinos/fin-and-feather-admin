@@ -92,7 +92,7 @@ export const useMapboxMap = () => {
                     <div style="padding: 8px;">
                       <h3 style="font-weight: bold; margin: 0 0 4px 0;">${location.address}</h3>
                       <p style="margin: 0; font-size: 14px;">Orders: ${location.count}</p>
-                      <p style="margin: 0; font-size: 14px;">Total Value: $${location.totalValue.toFixed(2)}</p>
+                      <p style="margin: 0; font-size: 14px;">Total Value: Ksh ${location.totalValue.toFixed(2)}</p>
                     </div>
                   `)
               )

@@ -67,7 +67,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({
                   </Badge>
                 </TableCell>
                 <TableCell>{formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}</TableCell>
-                <TableCell>${order.total_amount.toFixed(2)}</TableCell>
+                <TableCell>Ksh {order.total_amount.toFixed(2)}</TableCell>
                 <TableCell>{order.items.length} items</TableCell>
                 <TableCell className="text-right">
                   <Button

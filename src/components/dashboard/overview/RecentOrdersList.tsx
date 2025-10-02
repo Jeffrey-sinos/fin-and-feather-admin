@@ -63,7 +63,7 @@ const RecentOrdersList: React.FC<RecentOrdersListProps> = ({ orders }) => {
                     </Badge>
                   </TableCell>
                   <TableCell>{formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}</TableCell>
-                  <TableCell className="text-right">${order.total_amount.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">Ksh {order.total_amount.toFixed(2)}</TableCell>
                 </TableRow>
               ))
             ) : (
