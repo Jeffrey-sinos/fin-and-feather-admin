@@ -19,13 +19,30 @@ interface RecentOrdersListProps {
 }
 
 const RecentOrdersList: React.FC<RecentOrdersListProps> = ({ orders }) => {
-  const getStatusColor = (status: Order['status']) => {
+  const getPaymentStatusColor = (status: Order['payment_status']) => {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'processing':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'completed':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'failed':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'refunded':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+  
+  const getDeliveryStatusColor = (status: Order['delivery_status']) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'confirmed':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'in_transit':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+      case 'delivered':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'cancelled':
         return 'bg-red-100 text-red-800 border-red-200';
@@ -46,7 +63,8 @@ const RecentOrdersList: React.FC<RecentOrdersListProps> = ({ orders }) => {
             <TableRow>
               <TableHead>Order ID</TableHead>
               <TableHead>Customer</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Payment</TableHead>
+              <TableHead>Delivery</TableHead>
               <TableHead>Date</TableHead>
               <TableHead className="text-right">Amount</TableHead>
             </TableRow>
@@ -58,8 +76,13 @@ const RecentOrdersList: React.FC<RecentOrdersListProps> = ({ orders }) => {
                   <TableCell className="font-medium">{order.id.substring(0, 8)}...</TableCell>
                   <TableCell>{order.customer?.name || 'Unknown'}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={getStatusColor(order.status)}>
-                      {order.status}
+                    <Badge variant="outline" className={getPaymentStatusColor(order.payment_status)}>
+                      {order.payment_status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={getDeliveryStatusColor(order.delivery_status)}>
+                      {order.delivery_status.replace('_', ' ')}
                     </Badge>
                   </TableCell>
                   <TableCell>{formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}</TableCell>
@@ -68,7 +91,7 @@ const RecentOrdersList: React.FC<RecentOrdersListProps> = ({ orders }) => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="text-center">No recent orders</TableCell>
+                <TableCell colSpan={6} className="text-center">No recent orders</TableCell>
               </TableRow>
             )}
           </TableBody>

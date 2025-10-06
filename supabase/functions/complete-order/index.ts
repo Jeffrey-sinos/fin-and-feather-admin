@@ -15,7 +15,8 @@ interface OrderItem {
 interface Order {
   id: string;
   user_id: string;
-  status: string;
+  payment_status: string;
+  delivery_status: string;
   total_amount: number;
   created_at: string;
 }
@@ -134,14 +135,14 @@ Deno.serve(async (req) => {
       console.log('Server-to-server call, skipping user authorization');
     }
 
-    // Check if order is already completed (idempotent)
-    if (order.status === 'completed') {
-      console.log('Order already completed, returning early');
+    // Check if payment is already completed (idempotent)
+    if (order.payment_status === 'completed') {
+      console.log('Payment already completed, returning early');
       return new Response(
         JSON.stringify({ 
           success: true, 
           order,
-          message: 'Order was already completed'
+          message: 'Payment was already completed'
         }),
         { 
           status: 200, 
@@ -217,18 +218,18 @@ Deno.serve(async (req) => {
       console.log(`Updated product ${item.product_id} stock: ${oldStock} -> ${newStock}`);
     }
 
-    // Update order status to completed
+    // Update order payment_status to completed (delivery_status remains unchanged)
     const { data: updatedOrder, error: statusUpdateError } = await supabaseService
       .from('orders')
-      .update({ status: 'completed' })
+      .update({ payment_status: 'completed' })
       .eq('id', orderId)
       .select()
       .single();
 
     if (statusUpdateError) {
-      console.error('Error updating order status:', statusUpdateError);
+      console.error('Error updating order payment status:', statusUpdateError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to update order status' }),
+        JSON.stringify({ success: false, error: 'Failed to update payment status' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -236,13 +237,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Successfully completed order ${orderId} with ${stockUpdates.length} stock updates`);
+    console.log(`Successfully completed payment for order ${orderId} with ${stockUpdates.length} stock updates`);
 
     const response: CompleteOrderResponse = {
       success: true,
       order: updatedOrder,
       stockUpdates,
-      message: `Order completed successfully with ${stockUpdates.length} stock updates`
+      message: `Payment completed successfully with ${stockUpdates.length} stock updates`
     };
 
     return new Response(

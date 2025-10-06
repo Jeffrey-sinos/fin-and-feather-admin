@@ -42,8 +42,8 @@ const fetchProductAnalytics = async () => {
     // Fetch sales timeline data
     const { data: ordersData, error: ordersError } = await supabase
       .from('orders')
-      .select('total_amount, created_at, status')
-      .eq('status', 'completed')
+      .select('total_amount, created_at, payment_status')
+      .eq('payment_status', 'completed')
       .order('created_at', { ascending: true });
     
     if (ordersError) throw ordersError;
@@ -57,7 +57,7 @@ const fetchProductAnalytics = async () => {
         created_at,
         user_id
       `)
-      .eq('status', 'completed');
+      .eq('payment_status', 'completed');
     
     if (locationsError) throw locationsError;
 

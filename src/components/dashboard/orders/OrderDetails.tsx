@@ -30,19 +30,24 @@ import { Mail, Phone, MapPin } from 'lucide-react';
 
 interface OrderDetailsProps {
   order: Order;
-  onStatusChange: (status: Order['status']) => void;
+  onDeliveryStatusChange: (status: Order['delivery_status']) => void;
 }
 
-const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onStatusChange }) => {
+const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onDeliveryStatusChange }) => {
   const [updatingStatus, setUpdatingStatus] = React.useState(false);
   
-  const handleStatusChange = async (status: Order['status']) => {
-    if (status === order.status) return;
+  const handleDeliveryStatusChange = async (status: Order['delivery_status']) => {
+    if (status === order.delivery_status) return;
+    
+    // Warn if trying to update delivery before payment is completed
+    if (order.payment_status !== 'completed' && status !== 'pending' && status !== 'cancelled') {
+      console.warn('Attempting to change delivery status before payment is completed');
+    }
     
     setUpdatingStatus(true);
     
     try {
-      onStatusChange(status);
+      onDeliveryStatusChange(status);
     } catch (error) {
       console.error(error);
     } finally {
@@ -50,13 +55,30 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onStatusChange }) =>
     }
   };
 
-  const getStatusColor = (status: Order['status']) => {
+  const getPaymentStatusColor = (status: Order['payment_status']) => {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'processing':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'completed':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'failed':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'refunded':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getDeliveryStatusColor = (status: Order['delivery_status']) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'confirmed':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'in_transit':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+      case 'delivered':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'cancelled':
         return 'bg-red-100 text-red-800 border-red-200';
@@ -75,27 +97,44 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onStatusChange }) =>
           </p>
         </div>
         
-        <div className="flex items-center gap-2">
-          <div className="font-medium text-sm">Status:</div>
-          <Select
-            value={order.status}
-            onValueChange={handleStatusChange}
-            disabled={updatingStatus}
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue>
-                <Badge variant="outline" className={getStatusColor(order.status)}>
-                  {order.status}
-                </Badge>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="processing">Processing</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <div className="font-medium text-sm">Payment Status:</div>
+            <Badge variant="outline" className={getPaymentStatusColor(order.payment_status)}>
+              {order.payment_status}
+            </Badge>
+            <span className="text-xs text-muted-foreground">(read-only)</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <div className="font-medium text-sm">Delivery Status:</div>
+            <Select
+              value={order.delivery_status}
+              onValueChange={handleDeliveryStatusChange}
+              disabled={updatingStatus}
+            >
+              <SelectTrigger className="w-[150px]">
+                <SelectValue>
+                  <Badge variant="outline" className={getDeliveryStatusColor(order.delivery_status)}>
+                    {order.delivery_status.replace('_', ' ')}
+                  </Badge>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="in_transit">In Transit</SelectItem>
+                <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {order.payment_status !== 'completed' && order.delivery_status !== 'pending' && (
+            <p className="text-xs text-yellow-600">
+              ⚠️ Warning: Payment is not yet completed
+            </p>
+          )}
         </div>
       </div>
 

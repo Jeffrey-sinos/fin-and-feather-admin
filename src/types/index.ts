@@ -39,10 +39,14 @@ export const processOrderItems = (items: any[]): OrderItem[] => {
   }));
 }
 
+export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+export type DeliveryStatus = 'pending' | 'confirmed' | 'in_transit' | 'delivered' | 'cancelled';
+
 export interface Order {
   id: string;
   user_id: string;
-  status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  payment_status: PaymentStatus;
+  delivery_status: DeliveryStatus;
   total_amount: number;
   created_at: string;
   items: OrderItem[];

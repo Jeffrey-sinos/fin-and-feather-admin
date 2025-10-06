@@ -366,16 +366,16 @@ export async function createOrder(
   }
 }
 
-export async function updateOrderStatus(id: string, status: Order['status']): Promise<boolean> {
+export async function updateOrderDeliveryStatus(id: string, deliveryStatus: Order['delivery_status']): Promise<boolean> {
   try {
     const { error } = await supabase
       .from('orders')
-      .update({ status })
+      .update({ delivery_status: deliveryStatus })
       .eq('id', id);
     
     if (error) throw error;
     
-    toast.success(`Order status updated to ${status}`);
+    toast.success(`Delivery status updated to ${deliveryStatus.replace('_', ' ')}`);
     return true;
   } catch (error) {
     console.error(`Error updating order ${id} status:`, error);

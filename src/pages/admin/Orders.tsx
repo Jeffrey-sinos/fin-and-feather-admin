@@ -32,10 +32,17 @@ import {
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
-type StatusFilter = "all" | "pending" | "processing" | "completed" | "cancelled";
+type PaymentStatusFilter = "all" | "pending" | "completed" | "failed" | "refunded";
+type DeliveryStatusFilter = "all" | "pending" | "confirmed" | "in_transit" | "delivered" | "cancelled";
 
 // Fetch orders with pagination from Supabase
-const fetchOrders = async (page: number = 1, pageSize: number = 10, statusFilter: StatusFilter = "all", searchQuery: string = ""): Promise<{ orders: Order[], totalCount: number }> => {
+const fetchOrders = async (
+  page: number = 1, 
+  pageSize: number = 10, 
+  paymentFilter: PaymentStatusFilter = "all",
+  deliveryFilter: DeliveryStatusFilter = "all",
+  searchQuery: string = ""
+): Promise<{ orders: Order[], totalCount: number }> => {
   try {
     const offset = (page - 1) * pageSize;
     
@@ -46,9 +53,14 @@ const fetchOrders = async (page: number = 1, pageSize: number = 10, statusFilter
       .order('created_at', { ascending: false })
       .range(offset, offset + pageSize - 1);
     
-    // Apply status filter
-    if (statusFilter !== "all") {
-      query = query.eq('status', statusFilter);
+    // Apply payment status filter
+    if (paymentFilter !== "all") {
+      query = query.eq('payment_status', paymentFilter);
+    }
+    
+    // Apply delivery status filter
+    if (deliveryFilter !== "all") {
+      query = query.eq('delivery_status', deliveryFilter);
     }
     
     // Get orders with count
@@ -166,52 +178,27 @@ const fetchOrder = async (id: string): Promise<Order | null> => {
   }
 };
 
-// Update order status in Supabase
-const updateOrderStatusInSupabase = async (id: string, status: Order['status']): Promise<boolean> => {
+// Update order delivery status in Supabase (payment_status is read-only)
+const updateOrderDeliveryStatusInSupabase = async (id: string, deliveryStatus: Order['delivery_status']): Promise<boolean> => {
   try {
-    // If order is being completed, use the edge function for stock management
-    if (status === 'completed') {
-      console.log('[Orders] Invoking complete-order for', id);
-      const { data, error } = await supabase.functions.invoke('complete-order', {
-        body: { orderId: id }
-      });
-      console.log('[Orders] complete-order response', { data, error });
-
-      if (error) {
-        console.error('Error calling complete-order function:', error);
-        throw new Error(error.message || 'Failed to complete order');
-      }
-
-      if (!data?.success) {
-        console.error('complete-order returned error:', data);
-        throw new Error(data?.error || 'Failed to complete order');
-      }
-
-      toast({
-        title: "Success",
-        description: `Order completed successfully with ${data.stockUpdates?.length || 0} stock updates`,
-      });
-      return true;
-    } else {
-      // For other status changes, use simple update
-      const { error } = await supabase
-        .from('orders')
-        .update({ status })
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: `Order status updated to ${status}`,
-      });
-      return true;
-    }
+    // Only update delivery_status, payment_status is managed by edge functions
+    const { error } = await supabase
+      .from('orders')
+      .update({ delivery_status: deliveryStatus })
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    toast({
+      title: "Success",
+      description: `Delivery status updated to ${deliveryStatus.replace('_', ' ')}`,
+    });
+    return true;
   } catch (error) {
-    console.error(`Error updating order ${id} status:`, error);
+    console.error(`Error updating order ${id} delivery status:`, error);
     toast({
       title: "Error",
-      description: error instanceof Error ? error.message : "Failed to update order status",
+      description: error instanceof Error ? error.message : "Failed to update delivery status",
       variant: "destructive"
     });
     throw error;
@@ -221,7 +208,8 @@ const updateOrderStatusInSupabase = async (id: string, status: Order['status']):
 const Orders = () => {
   const queryClient = useQueryClient();
   const [filterValue, setFilterValue] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [paymentFilter, setPaymentFilter] = useState<PaymentStatusFilter>("all");
+  const [deliveryFilter, setDeliveryFilter] = useState<DeliveryStatusFilter>("all");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [viewDetailsOpen, setViewDetailsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -229,8 +217,8 @@ const Orders = () => {
 
   // Queries
   const { data: ordersData, isLoading, error } = useQuery({
-    queryKey: ['orders', currentPage, pageSize, statusFilter, filterValue],
-    queryFn: () => fetchOrders(currentPage, pageSize, statusFilter, filterValue),
+    queryKey: ['orders', currentPage, pageSize, paymentFilter, deliveryFilter, filterValue],
+    queryFn: () => fetchOrders(currentPage, pageSize, paymentFilter, deliveryFilter, filterValue),
   });
 
   const orders = ordersData?.orders || [];
@@ -247,23 +235,22 @@ const Orders = () => {
     enabled: !!selectedOrderId,
   });
 
-  // Update status mutation
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: Order['status'] }) => 
-      updateOrderStatusInSupabase(id, status),
+  // Update delivery status mutation
+  const updateDeliveryStatusMutation = useMutation({
+    mutationFn: ({ id, deliveryStatus }: { id: string; deliveryStatus: Order['delivery_status'] }) => 
+      updateOrderDeliveryStatusInSupabase(id, deliveryStatus),
     onSuccess: () => {
-      // After updating order status, invalidate relevant queries to refresh the data
+      // After updating delivery status, invalidate relevant queries to refresh the data
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['order', selectedOrderId] });
       queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] }); // Refresh products data to show updated stock
     },
   });
 
   // Reset page when filters change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, filterValue]);
+  }, [paymentFilter, deliveryFilter, filterValue]);
 
   // Handlers
   const handleViewDetails = (order: Order) => {
@@ -271,8 +258,8 @@ const Orders = () => {
     setViewDetailsOpen(true);
   };
 
-  const handleOrderStatusChange = (id: string, status: Order['status']) => {
-    updateStatusMutation.mutate({ id, status });
+  const handleOrderDeliveryStatusChange = (id: string, deliveryStatus: Order['delivery_status']) => {
+    updateDeliveryStatusMutation.mutate({ id, deliveryStatus });
   };
 
   const handlePageChange = (page: number) => {
@@ -302,15 +289,29 @@ const Orders = () => {
             />
           </div>
           
-          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+          <Select value={paymentFilter} onValueChange={(value) => setPaymentFilter(value as PaymentStatusFilter)}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by status" />
+              <SelectValue placeholder="Payment status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Orders</SelectItem>
+              <SelectItem value="all">All Payments</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="processing">Processing</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+              <SelectItem value="refunded">Refunded</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={deliveryFilter} onValueChange={(value) => setDeliveryFilter(value as DeliveryStatusFilter)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Delivery status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Deliveries</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="confirmed">Confirmed</SelectItem>
+              <SelectItem value="in_transit">In Transit</SelectItem>
+              <SelectItem value="delivered">Delivered</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
@@ -431,7 +432,7 @@ const Orders = () => {
           {selectedOrder && (
             <OrderDetails 
               order={selectedOrder} 
-              onStatusChange={(status) => handleOrderStatusChange(selectedOrder.id, status)}
+              onDeliveryStatusChange={(deliveryStatus) => handleOrderDeliveryStatusChange(selectedOrder.id, deliveryStatus)}
             />
           )}
         </DialogContent>

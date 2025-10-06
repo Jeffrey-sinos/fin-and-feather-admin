@@ -172,10 +172,10 @@ Deno.serve(async (req) => {
         console.error('Error updating transaction status:', updateTransactionError);
       }
 
-      // Get the order to check if it's already completed
+      // Get the order to check if payment is already completed
       const { data: order, error: orderError } = await supabaseService
         .from('orders')
-        .select('status')
+        .select('payment_status')
         .eq('id', transaction.order_id)
         .single();
 
@@ -190,9 +190,9 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Only complete the order if it's not already completed (idempotent)
-      if (order.status !== 'completed') {
-        console.log('Completing order and reducing stock for order:', transaction.order_id);
+      // Only complete payment if not already completed (idempotent)
+      if (order.payment_status !== 'completed') {
+        console.log('Completing payment and reducing stock for order:', transaction.order_id);
 
         // Call the complete-order function to handle stock reduction and order completion
         const { data: completeOrderData, error: completeOrderError } = await supabaseService.functions.invoke('complete-order', {
@@ -227,9 +227,9 @@ Deno.serve(async (req) => {
           );
         }
 
-        console.log('Successfully completed order:', transaction.order_id, 'with stock updates');
+        console.log('Successfully completed payment for order:', transaction.order_id, 'with stock updates');
       } else {
-        console.log('Order', transaction.order_id, 'is already completed, skipping stock reduction');
+        console.log('Payment for order', transaction.order_id, 'is already completed, skipping stock reduction');
       }
 
       // Mark callback as processed
@@ -260,10 +260,13 @@ Deno.serve(async (req) => {
         .update({ status: newStatus })
         .eq('id', transaction.id);
 
-      // Update order status to cancelled
+      // Update order payment_status to failed/cancelled and delivery_status to cancelled
       await supabaseService
         .from('orders')
-        .update({ status: 'cancelled' })
+        .update({ 
+          payment_status: newStatus.toLowerCase(),
+          delivery_status: 'cancelled'
+        })
         .eq('id', transaction.order_id);
 
       // Mark callback as processed
