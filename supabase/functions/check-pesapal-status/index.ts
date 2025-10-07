@@ -85,9 +85,10 @@ async function queryPesapalStatus(orderTrackingId: string, token: string): Promi
 
   const data: PesapalStatusResponse = await response.json();
   
-  if (data.error) {
+  // Only treat as error if error object has meaningful content
+  if (data.error && (data.error.message || data.error.code || data.error.error_type)) {
     console.error('Pesapal status error:', data);
-    throw new Error(data.message || 'Failed to get transaction status');
+    throw new Error(data.message || data.error.message || 'Failed to get transaction status');
   }
 
   return data;
@@ -184,32 +185,45 @@ Deno.serve(async (req) => {
 
     console.log('Pesapal status response:', JSON.stringify(statusData, null, 2));
 
-    // Map Pesapal status codes to our status
+    // Map Pesapal status codes to our status using status_code (number)
     // 0 = Invalid, 1 = Completed, 2 = Failed, 3 = Reversed
     let newStatus: string;
     let paymentStatus: string;
     
-    switch (statusData.payment_status_code) {
-      case '1':
+    switch (statusData.status_code) {
+      case 1:
         newStatus = 'COMPLETED';
         paymentStatus = 'completed';
         break;
-      case '2':
+      case 2:
         newStatus = 'FAILED';
         paymentStatus = 'failed';
         break;
-      case '3':
-        newStatus = 'REVERSED';
+      case 3:
+        // Reversed - map to FAILED for enum safety, refunded for orders
+        newStatus = 'FAILED';
         paymentStatus = 'refunded';
         break;
-      case '0':
+      case 0:
       default:
         newStatus = 'PENDING';
         paymentStatus = 'pending';
         break;
     }
 
-    console.log('Mapped status:', { pesapalCode: statusData.payment_status_code, newStatus, paymentStatus });
+    // Check if payment description contains "cancel" - override status
+    const descriptionLower = (statusData.payment_status_description || '').toLowerCase();
+    if (descriptionLower.includes('cancel')) {
+      newStatus = 'FAILED'; // enum-safe
+      paymentStatus = 'cancelled';
+    }
+
+    console.log('Mapped status:', { 
+      statusCode: statusData.status_code, 
+      description: statusData.payment_status_description,
+      newStatus, 
+      paymentStatus 
+    });
 
     // Update transaction status if we have one
     if (transactionId) {

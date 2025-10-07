@@ -253,21 +253,31 @@ Deno.serve(async (req) => {
     } else if (OrderNotificationType === 'FAILED' || OrderNotificationType === 'CANCELLED') {
       console.log('Processing failed/cancelled payment for order:', transaction.order_id);
 
-      // Update transaction status
-      const newStatus = OrderNotificationType === 'FAILED' ? 'FAILED' : 'CANCELLED';
-      await supabaseService
+      // Update transaction status - map CANCELLED to FAILED (enum-safe)
+      const txStatus = 'FAILED';
+      const orderPaymentStatus = OrderNotificationType === 'FAILED' ? 'failed' : 'cancelled';
+      
+      const { error: txUpdateError } = await supabaseService
         .from('pesapal_transactions')
-        .update({ status: newStatus })
+        .update({ status: txStatus })
         .eq('id', transaction.id);
 
+      if (txUpdateError) {
+        console.error('Error updating transaction status:', txUpdateError);
+      }
+
       // Update order payment_status to failed/cancelled and delivery_status to cancelled
-      await supabaseService
+      const { error: orderUpdateError } = await supabaseService
         .from('orders')
         .update({ 
-          payment_status: newStatus.toLowerCase(),
+          payment_status: orderPaymentStatus,
           delivery_status: 'cancelled'
         })
         .eq('id', transaction.order_id);
+
+      if (orderUpdateError) {
+        console.error('Error updating order status:', orderUpdateError);
+      }
 
       // Mark callback as processed
       await supabaseService
@@ -299,13 +309,21 @@ Deno.serve(async (req) => {
 
       if (statusError) {
         console.error('Error querying Pesapal status:', statusError);
+        // Log error but return 200 to prevent Pesapal retry storms
+        // Mark callback as processed to avoid reprocessing
+        await supabaseService
+          .from('pesapal_callbacks')
+          .update({ processed: true })
+          .eq('pesapal_tracking_id', OrderTrackingId);
+
         return new Response(
           JSON.stringify({ 
-            success: false, 
-            error: 'Failed to query payment status: ' + statusError.message 
+            success: true, 
+            message: 'Callback received but status check failed: ' + statusError.message,
+            orderId: transaction.order_id
           }),
           { 
-            status: 500, 
+            status: 200, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
         );
