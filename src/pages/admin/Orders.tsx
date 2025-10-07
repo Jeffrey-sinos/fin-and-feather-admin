@@ -6,6 +6,8 @@ import OrderDetails from '@/components/dashboard/orders/OrderDetails';
 import { Order, processOrder } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -247,6 +249,36 @@ const Orders = () => {
     },
   });
 
+  // Check payment status mutation
+  const checkPaymentStatusMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      const { data, error } = await supabase.functions.invoke('check-pesapal-status', {
+        body: { orderId }
+      });
+      
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Failed to check payment status');
+      
+      return data;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Payment Status Updated",
+        description: `Status: ${data.status}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order', selectedOrderId] });
+    },
+    onError: (error) => {
+      console.error("Error checking payment status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to check payment status",
+        variant: "destructive"
+      });
+    },
+  });
+
   // Reset page when filters change
   React.useEffect(() => {
     setCurrentPage(1);
@@ -349,6 +381,8 @@ const Orders = () => {
             <OrdersTable
               orders={orders}
               onViewDetails={handleViewDetails}
+              onCheckPaymentStatus={(orderId) => checkPaymentStatusMutation.mutate(orderId)}
+              isCheckingPayment={checkPaymentStatusMutation.isPending}
             />
 
             {totalPages > 1 && (

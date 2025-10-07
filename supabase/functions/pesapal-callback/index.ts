@@ -289,6 +289,49 @@ Deno.serve(async (req) => {
         }
       );
 
+    } else if (OrderNotificationType === 'IPNCHANGE' || !OrderNotificationType) {
+      console.log('Received IPNCHANGE or empty notification type, querying Pesapal status...');
+      
+      // Call check-pesapal-status function to get actual status
+      const { data: statusData, error: statusError } = await supabaseService.functions.invoke('check-pesapal-status', {
+        body: { orderTrackingId: OrderTrackingId }
+      });
+
+      if (statusError) {
+        console.error('Error querying Pesapal status:', statusError);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Failed to query payment status: ' + statusError.message 
+          }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      // Mark callback as processed
+      await supabaseService
+        .from('pesapal_callbacks')
+        .update({ processed: true })
+        .eq('pesapal_tracking_id', OrderTrackingId);
+
+      console.log('Status query result:', statusData);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Status queried successfully',
+          status: statusData?.status,
+          orderId: transaction.order_id
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+
     } else {
       console.log('Received unhandled notification type:', OrderNotificationType);
       

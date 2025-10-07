@@ -1,1 +1,7 @@
 project_id = "mdkexfslutqzwoqfyxil"
+
+[functions.pesapal-callback]
+verify_jwt = false
+
+[functions.check-pesapal-status]
+verify_jwt = false

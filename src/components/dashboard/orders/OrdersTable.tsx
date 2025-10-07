@@ -13,15 +13,21 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Order } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
+import { RefreshCw } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface OrdersTableProps {
   orders: Order[];
   onViewDetails: (order: Order) => void;
+  onCheckPaymentStatus?: (orderId: string) => void;
+  isCheckingPayment?: boolean;
 }
 
 const OrdersTable: React.FC<OrdersTableProps> = ({
   orders,
   onViewDetails,
+  onCheckPaymentStatus,
+  isCheckingPayment,
 }) => {
   const getPaymentStatusColor = (status: Order['payment_status']) => {
     switch (status) {
@@ -93,13 +99,34 @@ const OrdersTable: React.FC<OrdersTableProps> = ({
                 <TableCell>Ksh {order.total_amount.toFixed(2)}</TableCell>
                 <TableCell>{order.items.length} items</TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onViewDetails(order)}
-                  >
-                    View Details
-                  </Button>
+                  <div className="flex items-center justify-end gap-2">
+                    {order.payment_status === 'pending' && onCheckPaymentStatus && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onCheckPaymentStatus(order.id)}
+                              disabled={isCheckingPayment}
+                            >
+                              <RefreshCw className={`h-4 w-4 ${isCheckingPayment ? 'animate-spin' : ''}`} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Check Payment Status</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onViewDetails(order)}
+                    >
+                      View Details
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))
