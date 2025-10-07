@@ -103,7 +103,25 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseService = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { orderTrackingId, orderId } = await req.json();
+    // Safely parse body and allow fallback to query params
+    let body: any = {};
+    try {
+      body = await req.json().catch(() => ({}));
+    } catch (_) {
+      body = {};
+    }
+
+    let orderTrackingId = body?.orderTrackingId ?? null;
+    let orderId = body?.orderId ?? null;
+
+    // Fallback to URL query params if not provided in body
+    if (!orderTrackingId || !orderId) {
+      const url = new URL(req.url);
+      orderTrackingId = orderTrackingId || url.searchParams.get('orderTrackingId') || url.searchParams.get('OrderTrackingId');
+      const merchantRef = url.searchParams.get('OrderMerchantReference') || url.searchParams.get('merchantReference');
+      // Pesapal merchant reference is often in the format ORDER-<orderId>
+      orderId = orderId || url.searchParams.get('orderId') || (merchantRef?.startsWith('ORDER-') ? merchantRef.substring(6) : null);
+    }
 
     if (!orderTrackingId && !orderId) {
       return new Response(
