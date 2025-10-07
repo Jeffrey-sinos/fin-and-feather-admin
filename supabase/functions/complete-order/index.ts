@@ -151,72 +151,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch order items
-    const { data: orderItems, error: itemsError } = await supabaseService
-      .from('order_items')
-      .select('*')
-      .eq('order_id', orderId);
-
-    if (itemsError || !orderItems || orderItems.length === 0) {
-      console.error('Error fetching order items:', itemsError);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Could not fetch order items' }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    console.log(`Found ${orderItems.length} items to process`);
-
-    // Process stock updates
-    const stockUpdates: Array<{ productId: string; oldStock: number; newStock: number; }> = [];
-    
-    for (const item of orderItems as OrderItem[]) {
-      // Get current product stock
-      const { data: product, error: productError } = await supabaseService
-        .from('products')
-        .select('stock')
-        .eq('id', item.product_id)
-        .single();
-
-      if (productError || !product) {
-        console.error(`Error fetching product ${item.product_id}:`, productError);
-        continue;
-      }
-
-      const oldStock = product.stock;
-      const newStock = Math.max(0, oldStock - item.quantity);
-
-      // Update product stock
-      const { error: updateError } = await supabaseService
-        .from('products')
-        .update({ stock: newStock })
-        .eq('id', item.product_id);
-
-      if (updateError) {
-        console.error(`Error updating stock for product ${item.product_id}:`, updateError);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: `Failed to update stock for product ${item.product_id}` 
-          }),
-          { 
-            status: 500, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-
-      stockUpdates.push({
-        productId: item.product_id,
-        oldStock,
-        newStock
-      });
-
-      console.log(`Updated product ${item.product_id} stock: ${oldStock} -> ${newStock}`);
-    }
+    // Stock reduction is now handled by a DB trigger when payment_status changes to 'completed'
+    // Keeping this function idempotent and focused on status update only
+    const stockUpdates: Array<{ productId: string; oldStock: number; newStock: number; }> = []; // legacy response shape
+    console.log('Skipping manual stock updates - handled by trigger_reduce_stock_on_completion');
 
     // Update order payment_status to completed (delivery_status remains unchanged)
     const { data: updatedOrder, error: statusUpdateError } = await supabaseService

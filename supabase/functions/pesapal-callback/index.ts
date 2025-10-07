@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
       
       const { error: txUpdateError } = await supabaseService
         .from('pesapal_transactions')
-        .update({ status: txStatus })
+        .update({ status: txStatus, pesapal_status: txStatus })
         .eq('id', transaction.id);
 
       if (txUpdateError) {

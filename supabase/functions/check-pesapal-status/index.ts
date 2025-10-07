@@ -229,7 +229,7 @@ Deno.serve(async (req) => {
     if (transactionId) {
       const { error: updateError } = await supabaseService
         .from('pesapal_transactions')
-        .update({ status: newStatus })
+        .update({ status: newStatus, pesapal_status: newStatus })
         .eq('id', transactionId);
 
       if (updateError) {
