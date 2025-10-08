@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
 
     // Check if this is a successful payment notification
     if (OrderNotificationType === 'COMPLETED' || OrderNotificationType === 'SUCCESS') {
-      console.log('Processing successful payment for order:', transaction.order_id);
+      console.log('Processing successful payment. Transaction:', transaction.id);
 
       // Update transaction status to COMPLETED
       const { error: updateTransactionError } = await supabaseService
@@ -172,31 +172,109 @@ Deno.serve(async (req) => {
         console.error('Error updating transaction status:', updateTransactionError);
       }
 
+      let orderId = transaction.order_id;
+
+      // OPTION A IMPLEMENTATION: Create order if it doesn't exist yet
+      if (!orderId) {
+        console.log('No order exists yet, creating order from pending data...');
+
+        // Get the pending order data from callbacks table
+        const { data: pendingData, error: pendingError } = await supabaseService
+          .from('pesapal_callbacks')
+          .select('raw_payload')
+          .eq('pesapal_tracking_id', OrderTrackingId)
+          .eq('callback_type', 'PENDING_ORDER')
+          .maybeSingle();
+
+        if (pendingError || !pendingData) {
+          console.error('No pending order data found:', pendingError);
+          return new Response(
+            JSON.stringify({ success: false, error: 'No pending order data found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const orderData = pendingData.raw_payload as any;
+        console.log('Creating order from pending data:', orderData.user_id);
+
+        // Create the order
+        const { data: newOrder, error: orderCreateError } = await supabaseService
+          .from('orders')
+          .insert({
+            user_id: orderData.user_id,
+            total_amount: orderData.total_amount,
+            payment_status: 'pending', // Will be updated to completed next
+            delivery_status: 'pending',
+            delivery_address: orderData.delivery_info?.address || orderData.customer_info?.address,
+            delivery_latitude: orderData.delivery_info?.coordinates?.lat,
+            delivery_longitude: orderData.delivery_info?.coordinates?.lng,
+            delivery_zone_id: orderData.delivery_info?.zone_id,
+            delivery_fee: orderData.delivery_info?.fee || 0,
+            delivery_distance_km: orderData.delivery_info?.distance_km,
+            estimated_delivery_time: orderData.delivery_info?.estimated_time || 30,
+          })
+          .select()
+          .single();
+
+        if (orderCreateError || !newOrder) {
+          console.error('Error creating order:', orderCreateError);
+          return new Response(
+            JSON.stringify({ success: false, error: 'Failed to create order' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        orderId = newOrder.id;
+        console.log('Created order:', orderId);
+
+        // Create order items
+        const orderItems = orderData.items.map((item: any) => ({
+          order_id: orderId,
+          product_id: item.product_id,
+          quantity: item.quantity,
+          unit_price: item.unit_price, // Now properly stored from pending data
+        }));
+
+        const { error: itemsError } = await supabaseService
+          .from('order_items')
+          .insert(orderItems);
+
+        if (itemsError) {
+          console.error('Error creating order items:', itemsError);
+          // Continue anyway, order is created
+        }
+
+        // Link transaction to order
+        await supabaseService
+          .from('pesapal_transactions')
+          .update({ order_id: orderId })
+          .eq('id', transaction.id);
+
+        console.log('Order created and linked to transaction');
+      }
+
       // Get the order to check if payment is already completed
       const { data: order, error: orderError } = await supabaseService
         .from('orders')
         .select('payment_status')
-        .eq('id', transaction.order_id)
-        .single();
+        .eq('id', orderId)
+        .maybeSingle();
 
       if (orderError || !order) {
-        console.error('Order not found:', transaction.order_id, orderError);
+        console.error('Order not found after creation:', orderId, orderError);
         return new Response(
           JSON.stringify({ success: false, error: 'Order not found' }),
-          { 
-            status: 404, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       // Only complete payment if not already completed (idempotent)
       if (order.payment_status !== 'completed') {
-        console.log('Completing payment and reducing stock for order:', transaction.order_id);
+        console.log('Completing payment and reducing stock for order:', orderId);
 
         // Call the complete-order function to handle stock reduction and order completion
         const { data: completeOrderData, error: completeOrderError } = await supabaseService.functions.invoke('complete-order', {
-          body: { orderId: transaction.order_id }
+          body: { orderId }
         });
 
         if (completeOrderError) {
@@ -206,10 +284,7 @@ Deno.serve(async (req) => {
               success: false, 
               error: 'Failed to complete order: ' + completeOrderError.message 
             }),
-            { 
-              status: 500, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
@@ -220,16 +295,13 @@ Deno.serve(async (req) => {
               success: false, 
               error: 'Failed to complete order: ' + (completeOrderData?.error || 'Unknown error')
             }),
-            { 
-              status: 500, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
-        console.log('Successfully completed payment for order:', transaction.order_id, 'with stock updates');
+        console.log('Successfully completed payment for order:', orderId, 'with stock updates');
       } else {
-        console.log('Payment for order', transaction.order_id, 'is already completed, skipping stock reduction');
+        console.log('Payment for order', orderId, 'is already completed, skipping');
       }
 
       // Mark callback as processed
@@ -242,12 +314,9 @@ Deno.serve(async (req) => {
         JSON.stringify({ 
           success: true, 
           message: 'Payment processed successfully',
-          orderId: transaction.order_id
+          orderId
         }),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
 
     } else if (OrderNotificationType === 'FAILED' || OrderNotificationType === 'CANCELLED') {
