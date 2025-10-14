@@ -1,1 +1,55 @@
 project_id = "mdkexfslutqzwoqfyxil"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[storage]
+enabled = true
+port = 54327
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+port = 54328
+
+[edge_runtime]
+enabled = true
+port = 54329
+
+[functions.create-campaign]
+verify_jwt = false
+
+[functions.get-campaigns]
+verify_jwt = false
+
+[functions.send-test-message]
+verify_jwt = false
+
+[functions.send-campaign]
+verify_jwt = false
+
+[functions.brevo-webhook]
+verify_jwt = false
+
+[functions.complete-order]
+verify_jwt = false
+
+[functions.pesapal-callback]
+verify_jwt = false

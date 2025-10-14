@@ -194,33 +194,6 @@ export type Database = {
         }
         Relationships: []
       }
-      failed_login_attempts: {
-        Row: {
-          attempted_at: string | null
-          email: string
-          id: string
-          ip_address: unknown | null
-          reason: string | null
-          user_agent: string | null
-        }
-        Insert: {
-          attempted_at?: string | null
-          email: string
-          id?: string
-          ip_address?: unknown | null
-          reason?: string | null
-          user_agent?: string | null
-        }
-        Update: {
-          attempted_at?: string | null
-          email?: string
-          id?: string
-          ip_address?: unknown | null
-          reason?: string | null
-          user_agent?: string | null
-        }
-        Relationships: []
-      }
       message_delivery_logs: {
         Row: {
           brevo_message_id: string | null
@@ -289,33 +262,6 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
-        }
-        Relationships: []
-      }
-      notification_preferences: {
-        Row: {
-          created_at: string | null
-          id: string
-          profile_change_alerts: boolean | null
-          suspicious_activity_alerts: boolean | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          profile_change_alerts?: boolean | null
-          suspicious_activity_alerts?: boolean | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          profile_change_alerts?: boolean | null
-          suspicious_activity_alerts?: boolean | null
-          updated_at?: string | null
-          user_id?: string
         }
         Relationships: []
       }
@@ -703,10 +649,6 @@ export type Database = {
     Functions: {
       calculate_delivery_fee: {
         Args: { distance_km: number }
-        Returns: Json
-      }
-      check_failed_login_threshold: {
-        Args: { ip_addr: unknown; user_email: string }
         Returns: Json
       }
       has_role: {
