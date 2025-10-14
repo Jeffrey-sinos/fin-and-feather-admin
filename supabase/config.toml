@@ -1,16 +1,1 @@
 project_id = "mdkexfslutqzwoqfyxil"
-
-[functions.create-pesapal-order]
-verify_jwt = false
-
-[functions.pesapal-callback]
-verify_jwt = false
-
-[functions.check-pesapal-status]
-verify_jwt = false
-
-[functions.reconcile-pesapal-orders]
-verify_jwt = false
-
-[functions.complete-order]
-verify_jwt = false

@@ -369,12 +369,11 @@ export type Database = {
           delivery_fee: number | null
           delivery_latitude: number | null
           delivery_longitude: number | null
-          delivery_status: string
           delivery_zone_id: string | null
           estimated_delivery_time: number | null
           id: string
-          payment_status: string
           pesapal_transaction_id: string | null
+          status: string
           total_amount: number
           user_id: string
         }
@@ -385,12 +384,11 @@ export type Database = {
           delivery_fee?: number | null
           delivery_latitude?: number | null
           delivery_longitude?: number | null
-          delivery_status?: string
           delivery_zone_id?: string | null
           estimated_delivery_time?: number | null
           id?: string
-          payment_status?: string
           pesapal_transaction_id?: string | null
+          status?: string
           total_amount?: number
           user_id: string
         }
@@ -401,12 +399,11 @@ export type Database = {
           delivery_fee?: number | null
           delivery_latitude?: number | null
           delivery_longitude?: number | null
-          delivery_status?: string
           delivery_zone_id?: string | null
           estimated_delivery_time?: number | null
           id?: string
-          payment_status?: string
           pesapal_transaction_id?: string | null
+          status?: string
           total_amount?: number
           user_id?: string
         }

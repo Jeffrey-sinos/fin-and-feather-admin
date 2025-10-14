@@ -23,7 +23,6 @@ import ProductAnalytics from "./pages/admin/ProductAnalytics";
 import Campaigns from "./pages/admin/Campaigns";
 import Pages from "./pages/admin/Pages";
 import DynamicPage from "./pages/DynamicPage";
-import OrderSuccess from "./pages/OrderSuccess";
 
 const queryClient = new QueryClient();
 
@@ -37,7 +36,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/order-success" element={<OrderSuccess />} />
+            
             {/* Protected Admin Routes */}
             <Route path="/admin" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/admin/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />

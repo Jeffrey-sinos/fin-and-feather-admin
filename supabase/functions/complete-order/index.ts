@@ -15,8 +15,7 @@ interface OrderItem {
 interface Order {
   id: string;
   user_id: string;
-  payment_status: string;
-  delivery_status: string;
+  status: string;
   total_amount: number;
   created_at: string;
 }
@@ -135,14 +134,14 @@ Deno.serve(async (req) => {
       console.log('Server-to-server call, skipping user authorization');
     }
 
-    // Check if payment is already completed (idempotent)
-    if (order.payment_status === 'completed') {
-      console.log('Payment already completed, returning early');
+    // Check if order is already completed (idempotent)
+    if (order.status === 'completed') {
+      console.log('Order already completed, returning early');
       return new Response(
         JSON.stringify({ 
           success: true, 
           order,
-          message: 'Payment was already completed'
+          message: 'Order was already completed'
         }),
         { 
           status: 200, 
@@ -151,23 +150,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Stock reduction is now handled by a DB trigger when payment_status changes to 'completed'
-    // Keeping this function idempotent and focused on status update only
-    const stockUpdates: Array<{ productId: string; oldStock: number; newStock: number; }> = []; // legacy response shape
-    console.log('Skipping manual stock updates - handled by trigger_reduce_stock_on_completion');
+    // Fetch order items
+    const { data: orderItems, error: itemsError } = await supabaseService
+      .from('order_items')
+      .select('*')
+      .eq('order_id', orderId);
 
-    // Update order payment_status to completed (delivery_status remains unchanged)
-    const { data: updatedOrder, error: statusUpdateError } = await supabaseService
-      .from('orders')
-      .update({ payment_status: 'completed' })
-      .eq('id', orderId)
-      .select()
-      .single();
-
-    if (statusUpdateError) {
-      console.error('Error updating order payment status:', statusUpdateError);
+    if (itemsError || !orderItems || orderItems.length === 0) {
+      console.error('Error fetching order items:', itemsError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to update payment status' }),
+        JSON.stringify({ success: false, error: 'Could not fetch order items' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -175,13 +167,82 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Successfully completed payment for order ${orderId} with ${stockUpdates.length} stock updates`);
+    console.log(`Found ${orderItems.length} items to process`);
+
+    // Process stock updates
+    const stockUpdates: Array<{ productId: string; oldStock: number; newStock: number; }> = [];
+    
+    for (const item of orderItems as OrderItem[]) {
+      // Get current product stock
+      const { data: product, error: productError } = await supabaseService
+        .from('products')
+        .select('stock')
+        .eq('id', item.product_id)
+        .single();
+
+      if (productError || !product) {
+        console.error(`Error fetching product ${item.product_id}:`, productError);
+        continue;
+      }
+
+      const oldStock = product.stock;
+      const newStock = Math.max(0, oldStock - item.quantity);
+
+      // Update product stock
+      const { error: updateError } = await supabaseService
+        .from('products')
+        .update({ stock: newStock })
+        .eq('id', item.product_id);
+
+      if (updateError) {
+        console.error(`Error updating stock for product ${item.product_id}:`, updateError);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Failed to update stock for product ${item.product_id}` 
+          }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      stockUpdates.push({
+        productId: item.product_id,
+        oldStock,
+        newStock
+      });
+
+      console.log(`Updated product ${item.product_id} stock: ${oldStock} -> ${newStock}`);
+    }
+
+    // Update order status to completed
+    const { data: updatedOrder, error: statusUpdateError } = await supabaseService
+      .from('orders')
+      .update({ status: 'completed' })
+      .eq('id', orderId)
+      .select()
+      .single();
+
+    if (statusUpdateError) {
+      console.error('Error updating order status:', statusUpdateError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Failed to update order status' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    console.log(`Successfully completed order ${orderId} with ${stockUpdates.length} stock updates`);
 
     const response: CompleteOrderResponse = {
       success: true,
       order: updatedOrder,
       stockUpdates,
-      message: `Payment completed successfully with ${stockUpdates.length} stock updates`
+      message: `Order completed successfully with ${stockUpdates.length} stock updates`
     };
 
     return new Response(
