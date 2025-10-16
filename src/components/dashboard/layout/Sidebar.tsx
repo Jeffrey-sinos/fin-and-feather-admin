@@ -88,7 +88,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
         <div className="flex items-center">
           {isOpen && (
             <Link to="/admin" className="text-sidebar-foreground font-bold text-xl">
-              Fish & Chick
+              Lake Victoria Aquaculture
             </Link>
           )}
         </div>

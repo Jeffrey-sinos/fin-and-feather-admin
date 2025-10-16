@@ -190,7 +190,7 @@ const Dashboard = () => {
           />
           <StatsCard
             title="Total Revenue"
-            value={isLoading ? '...' : `$${stats?.totalRevenue.toFixed(2) || '0.00'}`}
+            value={isLoading ? '...' : `Ksh ${stats?.totalRevenue.toFixed(2) || '0.00'}`}
             icon={<DollarSign className="h-4 w-4 text-ocean-500" />}
           />
         </div>
