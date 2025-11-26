@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { NotificationBell } from './NotificationBell';
 
 interface TopBarProps {
   sidebarOpen: boolean;
@@ -48,7 +49,8 @@ const TopBar: React.FC<TopBarProps> = ({ sidebarOpen, setSidebarOpen }) => {
             </Button>
           </div>
           
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
+            <NotificationBell />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2 hover:bg-gray-100">
