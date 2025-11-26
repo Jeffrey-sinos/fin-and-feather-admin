@@ -19,7 +19,7 @@ export type Database = {
           action: string
           created_at: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           record_id: string | null
           table_name: string
           user_agent: string | null
@@ -29,7 +29,7 @@ export type Database = {
           action: string
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           record_id?: string | null
           table_name: string
           user_agent?: string | null
@@ -39,7 +39,7 @@ export type Database = {
           action?: string
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           record_id?: string | null
           table_name?: string
           user_agent?: string | null
@@ -194,6 +194,33 @@ export type Database = {
         }
         Relationships: []
       }
+      failed_login_attempts: {
+        Row: {
+          attempted_at: string | null
+          email: string
+          id: string
+          ip_address: unknown
+          reason: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          attempted_at?: string | null
+          email: string
+          id?: string
+          ip_address?: unknown
+          reason?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          attempted_at?: string | null
+          email?: string
+          id?: string
+          ip_address?: unknown
+          reason?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       message_delivery_logs: {
         Row: {
           brevo_message_id: string | null
@@ -265,6 +292,33 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          created_at: string | null
+          id: string
+          profile_change_alerts: boolean | null
+          suspicious_activity_alerts: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          profile_change_alerts?: boolean | null
+          suspicious_activity_alerts?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          profile_change_alerts?: boolean | null
+          suspicious_activity_alerts?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
@@ -315,6 +369,7 @@ export type Database = {
           delivery_fee: number | null
           delivery_latitude: number | null
           delivery_longitude: number | null
+          delivery_status: string
           delivery_zone_id: string | null
           estimated_delivery_time: number | null
           id: string
@@ -330,6 +385,7 @@ export type Database = {
           delivery_fee?: number | null
           delivery_latitude?: number | null
           delivery_longitude?: number | null
+          delivery_status?: string
           delivery_zone_id?: string | null
           estimated_delivery_time?: number | null
           id?: string
@@ -345,6 +401,7 @@ export type Database = {
           delivery_fee?: number | null
           delivery_latitude?: number | null
           delivery_longitude?: number | null
+          delivery_status?: string
           delivery_zone_id?: string | null
           estimated_delivery_time?: number | null
           id?: string
@@ -647,8 +704,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      calculate_delivery_fee: {
-        Args: { distance_km: number }
+      calculate_delivery_fee: { Args: { distance_km: number }; Returns: Json }
+      check_failed_login_threshold: {
+        Args: { ip_addr: unknown; user_email: string }
         Returns: Json
       }
       has_role: {
@@ -666,10 +724,7 @@ export type Database = {
         }
         Returns: undefined
       }
-      mask_customer_phone: {
-        Args: { phone_number: string }
-        Returns: string
-      }
+      mask_customer_phone: { Args: { phone_number: string }; Returns: string }
       mask_customer_phone_enhanced: {
         Args: { phone_number: string }
         Returns: string
@@ -686,10 +741,7 @@ export type Database = {
         Args: { transaction_order_id: string }
         Returns: boolean
       }
-      validate_phone_number: {
-        Args: { phone: string }
-        Returns: boolean
-      }
+      validate_phone_number: { Args: { phone: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
