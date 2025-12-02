@@ -22,6 +22,7 @@ import ContactSubscribers from "./pages/admin/ContactSubscribers";
 import ProductAnalytics from "./pages/admin/ProductAnalytics";
 import Campaigns from "./pages/admin/Campaigns";
 import Pages from "./pages/admin/Pages";
+import AdminUsers from "./pages/admin/AdminUsers";
 import DynamicPage from "./pages/DynamicPage";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/admin/contacts" element={<ProtectedRoute><ContactSubscribers /></ProtectedRoute>} />
             <Route path="/admin/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
             <Route path="/admin/pages" element={<ProtectedRoute><Pages /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             
             {/* Dynamic Public Pages */}
             <Route path="/page/:slug" element={<DynamicPage />} />

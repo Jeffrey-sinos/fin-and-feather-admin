@@ -1,16 +1,17 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Menu, LogOut, User } from 'lucide-react';
+import { Menu, LogOut, User, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { NotificationBell } from './NotificationBell';
+import AccountSettings from '@/components/dashboard/account/AccountSettings';
 
 interface TopBarProps {
   sidebarOpen: boolean;
@@ -19,6 +20,7 @@ interface TopBarProps {
 
 const TopBar: React.FC<TopBarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   const { user } = useAuth();
+  const [isAccountSettingsOpen, setIsAccountSettingsOpen] = useState(false);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -62,6 +64,14 @@ const TopBar: React.FC<TopBarProps> = ({ sidebarOpen, setSidebarOpen }) => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-white border border-gray-200 shadow-lg z-50">
                 <DropdownMenuItem 
+                  onClick={() => setIsAccountSettingsOpen(true)}
+                  className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100"
+                >
+                  <Settings className="h-4 w-4" />
+                  <span>Account Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
                   onClick={handleSignOut}
                   className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100"
                 >
@@ -73,6 +83,11 @@ const TopBar: React.FC<TopBarProps> = ({ sidebarOpen, setSidebarOpen }) => {
           </div>
         </div>
       </div>
+      
+      <AccountSettings 
+        open={isAccountSettingsOpen} 
+        onOpenChange={setIsAccountSettingsOpen} 
+      />
     </header>
   );
 };
