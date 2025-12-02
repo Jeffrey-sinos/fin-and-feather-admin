@@ -4,12 +4,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Plus, Minus } from 'lucide-react';
+import { Search, Plus, Minus, Download } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types';
 import InventoryTable from '@/components/dashboard/inventory/InventoryTable';
 import StockUpdateModal from '@/components/dashboard/inventory/StockUpdateModal';
+import { exportToCSV } from '@/utils/csvExport';
 
 // Fetch products from Supabase
 const fetchProducts = async (): Promise<Product[]> => {
@@ -122,6 +123,29 @@ const Inventory = () => {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h1 className="text-3xl font-bold">Inventory Management</h1>
+          <Button
+            variant="outline"
+            onClick={() => {
+              const getStockStatus = (stock: number) => {
+                if (stock <= 0) return 'Out of Stock';
+                if (stock <= 5) return 'Low Stock';
+                if (stock <= 20) return 'Limited Stock';
+                return 'In Stock';
+              };
+              exportToCSV(filteredProducts, 'inventory', [
+                { key: 'name', header: 'Product' },
+                { key: 'category', header: 'Category' },
+                { key: (p) => `Ksh ${p.price.toFixed(2)}`, header: 'Price' },
+                { key: 'stock', header: 'Current Stock' },
+                { key: (p) => getStockStatus(p.stock), header: 'Status' },
+              ]);
+              toast({ title: 'Export Complete', description: 'Inventory exported to CSV' });
+            }}
+            disabled={filteredProducts.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
         </div>
 
         <div className="flex items-center border rounded-md px-3 py-2 max-w-sm">

@@ -5,7 +5,9 @@ import OrdersTable from '@/components/dashboard/orders/OrdersTable';
 import OrderDetails from '@/components/dashboard/orders/OrderDetails';
 import { Order, processOrder } from '@/types';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Search, Download } from 'lucide-react';
+import { exportToCSV } from '@/utils/csvExport';
 import {
   Dialog,
   DialogContent,
@@ -289,6 +291,25 @@ const Orders = () => {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h1 className="text-3xl font-bold">Orders</h1>
+          <Button
+            variant="outline"
+            onClick={() => {
+              exportToCSV(orders, 'orders', [
+                { key: 'id', header: 'Order ID' },
+                { key: (o) => o.customer?.name || 'Unknown', header: 'Customer' },
+                { key: (o) => o.customer?.email || 'N/A', header: 'Email' },
+                { key: 'status', header: 'Status' },
+                { key: (o) => new Date(o.created_at).toLocaleDateString(), header: 'Date' },
+                { key: (o) => `Ksh ${o.total_amount.toFixed(2)}`, header: 'Amount' },
+                { key: (o) => o.items?.length || 0, header: 'Items' },
+              ]);
+              toast({ title: 'Export Complete', description: 'Orders exported to CSV' });
+            }}
+            disabled={orders.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">

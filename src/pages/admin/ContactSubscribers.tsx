@@ -6,9 +6,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/components/ui/use-toast';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { exportToCSV } from '@/utils/csvExport';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -110,7 +111,26 @@ const ContactSubscribers = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Contact Subscribers</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h1 className="text-3xl font-bold">Contact Subscribers</h1>
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (contacts && contacts.length > 0) {
+                exportToCSV(contacts, 'contact_subscribers', [
+                  { key: 'phone_number', header: 'Phone Number' },
+                  { key: 'opt_in_reason', header: 'Opt-in Reason' },
+                  { key: (c) => new Date(c.created_at).toLocaleDateString(), header: 'Subscription Date' },
+                ]);
+                toast({ title: 'Export Complete', description: 'Contact subscribers exported to CSV' });
+              }
+            }}
+            disabled={!contacts || contacts.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
         
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <Card>

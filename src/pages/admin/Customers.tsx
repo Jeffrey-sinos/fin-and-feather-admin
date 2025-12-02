@@ -5,7 +5,10 @@ import DashboardLayout from '@/components/dashboard/layout/DashboardLayout';
 import CustomersTable from '@/components/dashboard/customers/CustomersTable';
 import { Customer } from '@/types';
 import { Input } from '@/components/ui/input';
-import { Search, Mail } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Search, Mail, Download } from 'lucide-react';
+import { exportToCSV } from '@/utils/csvExport';
+import { toast } from '@/components/ui/use-toast';
 import { 
   Dialog,
   DialogContent,
@@ -22,7 +25,6 @@ import {
 } from "@/components/ui/card";
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/components/ui/use-toast';
 
 // Fetch customers from Supabase
 const fetchCustomers = async (): Promise<Customer[]> => {
@@ -76,6 +78,23 @@ const Customers = () => {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h1 className="text-3xl font-bold">Customers</h1>
+          <Button
+            variant="outline"
+            onClick={() => {
+              exportToCSV(filteredCustomers, 'customers', [
+                { key: 'full_name', header: 'Name' },
+                { key: 'email', header: 'Email' },
+                { key: 'phone', header: 'Phone' },
+                { key: 'address', header: 'Address' },
+                { key: (c) => new Date(c.created_at).toLocaleDateString(), header: 'Customer Since' },
+              ]);
+              toast({ title: 'Export Complete', description: 'Customers exported to CSV' });
+            }}
+            disabled={filteredCustomers.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
         </div>
 
         <div className="flex items-center border rounded-md px-3 py-2 max-w-sm">

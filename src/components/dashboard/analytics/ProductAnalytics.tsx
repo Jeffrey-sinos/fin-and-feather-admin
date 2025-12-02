@@ -16,6 +16,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { getCategoryBadgeClasses } from '@/utils/categoryColors';
 
 interface ProductSalesData {
   productId: string;
@@ -80,13 +81,7 @@ const ProductAnalytics: React.FC<ProductAnalyticsProps> = ({
                   <TableCell className="text-right text-xs py-2">{product.totalSold}</TableCell>
                   <TableCell className="py-2">
                     {product.category && (
-                      <Badge variant="outline" className={
-                        `text-xs py-0 px-1.5 ${
-                          product.category === 'fish'
-                            ? 'bg-ocean-100 text-ocean-800 border-ocean-200'
-                            : 'bg-coral-100 text-coral-800 border-coral-200'
-                        }`
-                      }>
+                      <Badge variant="outline" className={`text-xs py-0 px-1.5 ${getCategoryBadgeClasses(product.category)}`}>
                         {product.category}
                       </Badge>
                     )}

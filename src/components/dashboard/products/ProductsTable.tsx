@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Product } from '@/types';
 import { Edit, Trash2 } from 'lucide-react';
+import { getCategoryBadgeClasses } from '@/utils/categoryColors';
 
 interface ProductsTableProps {
   products: Product[];
@@ -55,11 +56,7 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline" className={
-                    product.category === 'fish'
-                      ? 'bg-ocean-100 text-ocean-800 border-ocean-200'
-                      : 'bg-coral-100 text-coral-800 border-coral-200'
-                  }>
+                  <Badge variant="outline" className={getCategoryBadgeClasses(product.category)}>
                     {product.category}
                   </Badge>
                 </TableCell>

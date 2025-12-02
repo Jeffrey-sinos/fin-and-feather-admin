@@ -23,10 +23,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Download } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { exportToCSV } from '@/utils/csvExport';
 
 // Fetch products from Supabase
 const fetchProducts = async (): Promise<Product[]> => {
@@ -220,6 +221,23 @@ const Products = () => {
           <h1 className="text-3xl font-bold">Products</h1>
           
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                exportToCSV(filteredProducts, 'products', [
+                  { key: 'name', header: 'Name' },
+                  { key: 'category', header: 'Category' },
+                  { key: (p) => `Ksh ${p.price.toFixed(2)}`, header: 'Price' },
+                  { key: 'stock', header: 'Stock' },
+                  { key: 'description', header: 'Description' },
+                ]);
+                toast({ title: 'Export Complete', description: 'Products exported to CSV' });
+              }}
+              disabled={filteredProducts.length === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
