@@ -747,6 +747,20 @@ export type Database = {
         Args: { ip_addr: unknown; user_email: string }
         Returns: Json
       }
+      get_user_order_history: {
+        Args: { requesting_user_id: string }
+        Returns: {
+          item_id: string
+          order_created_at: string
+          order_id: string
+          order_status: string
+          product_image_url: string
+          product_name: string
+          quantity: number
+          total_amount: number
+          unit_price: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

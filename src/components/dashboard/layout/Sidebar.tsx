@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Package, ShoppingCart, Users, Home, Box, Mail, FileText, MessageSquare, BarChart3, Megaphone, FileEdit } from 'lucide-react';
+import { Package, ShoppingCart, Users, Home, Box, Mail, FileText, MessageSquare, BarChart3, Megaphone, FileEdit, ShieldCheck } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -70,6 +70,11 @@ const navItems: NavItem[] = [
     title: 'Contact Subscribers',
     href: '/admin/contacts',
     icon: MessageSquare,
+  },
+  {
+    title: 'Admin Users',
+    href: '/admin/users',
+    icon: ShieldCheck,
   },
 ];
 
