@@ -109,11 +109,18 @@ const AdminUsers: React.FC = () => {
       setIsAddDialogOpen(false);
       setNewAdminEmail('');
       setNewAdminName('');
+      
+      const isExisting = data.isExistingUser;
+      
       toast({
-        title: 'Admin Created',
-        description: data.emailSent 
-          ? 'Admin user created and welcome email sent.' 
-          : 'Admin user created. Please share credentials manually.',
+        title: isExisting ? 'Admin Role Added' : 'Admin Created',
+        description: isExisting 
+          ? data.emailSent 
+            ? 'User has been promoted to admin and notified via email.'
+            : 'User has been promoted to admin.'
+          : data.emailSent 
+            ? 'Admin user created and credentials sent via email.' 
+            : 'Admin user created. Please share credentials manually.',
       });
     },
     onError: (error: Error) => {

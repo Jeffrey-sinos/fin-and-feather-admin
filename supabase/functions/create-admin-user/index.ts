@@ -11,6 +11,9 @@ interface CreateAdminRequest {
   fullName: string;
 }
 
+// Production URL for the admin portal
+const ADMIN_PORTAL_URL = "https://fin-and-feather-admin.lovable.app/auth";
+
 // Generate a secure temporary password
 function generateTempPassword(length: number = 12): string {
   const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -33,6 +36,109 @@ function generateTempPassword(length: number = 12): string {
   
   // Shuffle the password
   return password.split("").sort(() => Math.random() - 0.5).join("");
+}
+
+// Email template for new admin users
+function getNewAdminEmailHtml(fullName: string, email: string, tempPassword: string): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #0099cc 0%, #006699 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+          <h1 style="margin: 0; font-size: 24px;">Welcome to Lake Victoria Aquaculture</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">Admin Portal Access</p>
+        </div>
+        <div style="background: #f9f9f9; padding: 30px; border: 1px solid #ddd; border-top: none;">
+          <p style="margin-top: 0;">Hello <strong>${fullName}</strong>,</p>
+          <p>You have been granted administrator access to the Lake Victoria Aquaculture management portal.</p>
+          
+          <div style="background: #fff; border: 2px dashed #0099cc; padding: 20px; margin: 20px 0; border-radius: 8px;">
+            <h3 style="margin-top: 0; color: #0099cc;">Your Login Credentials</h3>
+            <p style="margin-bottom: 5px;"><strong>Email:</strong> ${email}</p>
+            <p style="margin-bottom: 5px;"><strong>Temporary Password:</strong></p>
+            <div style="font-family: monospace; font-size: 18px; background: #e8f4f8; padding: 10px; border-radius: 4px; letter-spacing: 1px; text-align: center;">${tempPassword}</div>
+          </div>
+          
+          <p>Click the button below to access the admin portal:</p>
+          
+          <table cellspacing="0" cellpadding="0" style="margin: 20px 0;">
+            <tr>
+              <td style="background: #0099cc; border-radius: 5px;">
+                <a href="${ADMIN_PORTAL_URL}" style="color: white; text-decoration: none; font-weight: bold; display: inline-block; padding: 12px 30px;">
+                  Access Admin Portal
+                </a>
+              </td>
+            </tr>
+          </table>
+          
+          <p style="font-size: 12px; color: #666;">Or copy this link: <a href="${ADMIN_PORTAL_URL}" style="color: #0099cc;">${ADMIN_PORTAL_URL}</a></p>
+          
+          <div style="background: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 15px; border-radius: 5px; margin-top: 20px;">
+            <strong>⚠️ Security Notice:</strong><br>
+            Please change your password immediately after your first login for security purposes.
+          </div>
+        </div>
+        <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
+          <p style="margin: 0;">Lake Victoria Aquaculture © ${new Date().getFullYear()}</p>
+          <p style="margin: 5px 0 0 0;">This is an automated message. Please do not reply directly to this email.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+// Email template for existing users promoted to admin
+function getPromotedAdminEmailHtml(fullName: string): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #0099cc 0%, #006699 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+          <h1 style="margin: 0; font-size: 24px;">Admin Access Granted</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">Lake Victoria Aquaculture</p>
+        </div>
+        <div style="background: #f9f9f9; padding: 30px; border: 1px solid #ddd; border-top: none;">
+          <p style="margin-top: 0;">Hello <strong>${fullName}</strong>,</p>
+          <p>Great news! You have been granted <strong>administrator access</strong> to the Lake Victoria Aquaculture management portal.</p>
+          
+          <div style="background: #d4edda; border: 1px solid #28a745; color: #155724; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <strong>✓ What's New:</strong><br>
+            You can now access the admin dashboard to manage products, orders, inventory, and more.
+          </div>
+          
+          <p>Use your existing account credentials to log in:</p>
+          
+          <table cellspacing="0" cellpadding="0" style="margin: 20px 0;">
+            <tr>
+              <td style="background: #0099cc; border-radius: 5px;">
+                <a href="${ADMIN_PORTAL_URL}" style="color: white; text-decoration: none; font-weight: bold; display: inline-block; padding: 12px 30px;">
+                  Access Admin Portal
+                </a>
+              </td>
+            </tr>
+          </table>
+          
+          <p style="font-size: 12px; color: #666;">Or copy this link: <a href="${ADMIN_PORTAL_URL}" style="color: #0099cc;">${ADMIN_PORTAL_URL}</a></p>
+        </div>
+        <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
+          <p style="margin: 0;">Lake Victoria Aquaculture © ${new Date().getFullYear()}</p>
+          <p style="margin: 5px 0 0 0;">This is an automated message. Please do not reply directly to this email.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
 }
 
 serve(async (req: Request) => {
@@ -132,17 +238,62 @@ serve(async (req: Request) => {
         });
       }
 
+      console.log(`Admin role added to existing user: ${email}`);
+
+      // Send notification email to existing user
+      let emailSent = false;
+      if (brevoApiKey && brevoSenderEmail) {
+        try {
+          const emailHtml = getPromotedAdminEmailHtml(fullName);
+          
+          const emailResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+            method: "POST",
+            headers: {
+              "Accept": "application/json",
+              "Content-Type": "application/json",
+              "api-key": brevoApiKey,
+            },
+            body: JSON.stringify({
+              sender: { name: brevoSenderName || "Lake Victoria Aquaculture", email: brevoSenderEmail },
+              to: [{ email, name: fullName }],
+              subject: "You've Been Granted Admin Access - Lake Victoria Aquaculture",
+              htmlContent: emailHtml,
+            }),
+          });
+
+          if (!emailResponse.ok) {
+            const errorText = await emailResponse.text();
+            console.error("Failed to send promotion email:", errorText);
+          } else {
+            console.log("Promotion notification email sent successfully");
+            emailSent = true;
+          }
+        } catch (emailError) {
+          console.error("Error sending promotion email:", emailError);
+        }
+      }
+
+      // Log the action
+      await supabaseAdmin.from("audit_logs").insert({
+        user_id: requestingUser.id,
+        action: `PROMOTED_TO_ADMIN: ${email}`,
+        table_name: "user_roles",
+        record_id: existingUser.id,
+      });
+
       return new Response(JSON.stringify({ 
         success: true, 
         message: "Admin role added to existing user",
-        userId: existingUser.id 
+        userId: existingUser.id,
+        isExistingUser: true,
+        emailSent
       }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Generate temporary password
+    // Generate temporary password for new user
     const tempPassword = generateTempPassword();
 
     console.log(`Creating new admin user: ${email}`);
@@ -185,60 +336,11 @@ serve(async (req: Request) => {
     console.log("Admin role added successfully");
 
     // Send welcome email via Brevo
+    let emailSent = false;
     if (brevoApiKey && brevoSenderEmail) {
-      const loginUrl = `${req.headers.get("origin") || "https://your-app.lovable.app"}/auth`;
-      
-      const emailHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #0099cc 0%, #006699 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border: 1px solid #ddd; }
-            .credentials { background: #fff; border: 2px dashed #0099cc; padding: 20px; margin: 20px 0; border-radius: 8px; }
-            .password { font-family: monospace; font-size: 18px; background: #e8f4f8; padding: 10px; border-radius: 4px; letter-spacing: 1px; }
-            .button { display: inline-block; background: #0099cc; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin-top: 20px; }
-            .warning { background: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 15px; border-radius: 5px; margin-top: 20px; }
-            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Welcome to Lake Victoria Aquaculture</h1>
-              <p>Admin Portal Access</p>
-            </div>
-            <div class="content">
-              <p>Hello <strong>${fullName}</strong>,</p>
-              <p>You have been granted administrator access to the Lake Victoria Aquaculture management portal.</p>
-              
-              <div class="credentials">
-                <h3 style="margin-top: 0;">Your Login Credentials</h3>
-                <p><strong>Email:</strong> ${email}</p>
-                <p><strong>Temporary Password:</strong></p>
-                <div class="password">${tempPassword}</div>
-              </div>
-              
-              <p>Click the button below to access the admin portal:</p>
-              <a href="${loginUrl}" class="button">Access Admin Portal</a>
-              
-              <div class="warning">
-                <strong>⚠️ Security Notice:</strong><br>
-                Please change your password immediately after your first login for security purposes.
-              </div>
-            </div>
-            <div class="footer">
-              <p>Lake Victoria Aquaculture © ${new Date().getFullYear()}</p>
-              <p>This is an automated message. Please do not reply directly to this email.</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-
       try {
+        const emailHtml = getNewAdminEmailHtml(fullName, email, tempPassword);
+
         const emailResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
           method: "POST",
           headers: {
@@ -259,6 +361,7 @@ serve(async (req: Request) => {
           console.error("Failed to send email:", errorText);
         } else {
           console.log("Welcome email sent successfully");
+          emailSent = true;
         }
       } catch (emailError) {
         console.error("Error sending email:", emailError);
@@ -280,7 +383,8 @@ serve(async (req: Request) => {
       success: true, 
       message: "Admin user created successfully",
       userId: newUser.user.id,
-      emailSent: !!(brevoApiKey && brevoSenderEmail)
+      isExistingUser: false,
+      emailSent
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
