@@ -9,6 +9,7 @@ import ProductSalesChart from '@/components/dashboard/analytics/ProductSalesChar
 import SalesTimelineChart from '@/components/dashboard/analytics/SalesTimelineChart';
 import CategoryPieChart from '@/components/dashboard/analytics/CategoryPieChart';
 import NairobiOrdersMap from '@/components/dashboard/analytics/NairobiOrdersMap';
+import { getCategoryHexColor } from '@/utils/categoryColors';
 
 interface OrderWithLocation {
   id: string;
@@ -125,7 +126,7 @@ const fetchProductAnalytics = async () => {
     const categoryData = Array.from(categorySalesMap.entries()).map(([category, quantity]) => ({
       name: category,
       value: quantity,
-      fill: category === 'fish' ? '#0EA5E9' : category === 'chicken' ? '#F97316' : '#8B5CF6'
+      fill: getCategoryHexColor(category)
     }));
 
     // Prepare timeline data

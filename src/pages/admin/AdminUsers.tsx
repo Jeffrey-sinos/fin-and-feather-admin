@@ -34,8 +34,9 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { UserPlus, Trash2, Shield, Loader2 } from 'lucide-react';
+import { UserPlus, Trash2, Shield, Loader2, Download } from 'lucide-react';
 import { format } from 'date-fns';
+import { exportToCSV } from '@/utils/csvExport';
 
 interface AdminUser {
   id: string;
@@ -183,13 +184,32 @@ const AdminUsers: React.FC = () => {
             </p>
           </div>
           
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
-                <UserPlus className="h-4 w-4" />
-                Add Admin
-              </Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (adminUsers && adminUsers.length > 0) {
+                  exportToCSV(adminUsers, 'admin_users', [
+                    { key: (a) => a.profile?.full_name || 'Unknown', header: 'Name' },
+                    { key: (a) => a.profile?.email || 'N/A', header: 'Email' },
+                    { key: 'role', header: 'Role' },
+                    { key: (a) => format(new Date(a.created_at), 'MMM d, yyyy'), header: 'Added On' },
+                  ]);
+                  toast({ title: 'Export Complete', description: 'Admin users exported to CSV' });
+                }
+              }}
+              disabled={!adminUsers || adminUsers.length === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Add Admin
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>Add New Admin</DialogTitle>
@@ -243,6 +263,7 @@ const AdminUsers: React.FC = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <div className="rounded-lg border bg-card">

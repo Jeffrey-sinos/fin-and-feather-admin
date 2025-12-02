@@ -6,9 +6,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/components/ui/use-toast';
-import { Mail } from 'lucide-react';
+import { Mail, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { exportToCSV } from '@/utils/csvExport';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -98,7 +99,25 @@ const Newsletter = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Newsletter Management</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h1 className="text-3xl font-bold">Newsletter Management</h1>
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (subscriptions && subscriptions.length > 0) {
+                exportToCSV(subscriptions, 'newsletter_subscribers', [
+                  { key: 'email', header: 'Email' },
+                  { key: (s) => new Date(s.created_at).toLocaleDateString(), header: 'Subscribed Date' },
+                ]);
+                toast({ title: 'Export Complete', description: 'Newsletter subscribers exported to CSV' });
+              }
+            }}
+            disabled={!subscriptions || subscriptions.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
         
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <Card>
